@@ -1,0 +1,52 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import axiosInstance from '../../api/axiosInstance';
+import { ENDPOINTS } from '../../api/endpoints';
+import Skeleton from '../common/Skeleton';
+
+const FacultyDashboard = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axiosInstance.get(ENDPOINTS.FACULTY.DASHBOARD_STATS)
+      .then(({ data }) => setStats(data.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="dashboard-home">
+      <div className="dashboard-home__header">
+        <h1>Welcome, {user?.name}</h1>
+        <p className="text-secondary">{user?.branch} - {user?.className}{user?.section ? ` - ${user.section}` : ''}</p>
+      </div>
+
+      {loading ? (
+        <Skeleton variant="card" height="200px" />
+      ) : stats ? (
+        <div className="stats-grid">
+          <div className="stat-card card">
+            <h3>Total Students</h3>
+            <p className="stat-card__value stat-card__value--primary">{stats.totalStudents}</p>
+          </div>
+          <div className="stat-card card">
+            <h3>Classes Taken</h3>
+            <p className="stat-card__value stat-card__value--green">{stats.totalClasses}</p>
+          </div>
+          <div className="stat-card card">
+            <h3>Defaulters</h3>
+            <p className="stat-card__value stat-card__value--red">{stats.defaulters}</p>
+          </div>
+        </div>
+      ) : (
+        <div className="welcome-card card">
+          <p>Could not load dashboard stats.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FacultyDashboard;

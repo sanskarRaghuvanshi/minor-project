@@ -1,0 +1,4 @@
+2026-07-29T10:20:43.777Z [[33mwarn[39m]: SMTP not configured. Email operations will fall back to console logging. {"service":"smart-attendance-backend"}
+2026-07-29T10:20:43.848Z [[32minfo[39m]: MongoDB event: connected {"service":"smart-attendance-backend"}
+2026-07-29T10:20:43.854Z [[32minfo[39m]: MongoDB connected: localhost:27017/smart-attendance {"service":"smart-attendance-backend"}
+2026-07-29T10:20:43.868Z [[32minfo[39m]: Server running on port 5000 in development mode {"service":"smart-attendance-backend"}
