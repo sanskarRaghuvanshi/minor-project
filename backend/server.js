@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin.js';
 import leaveRoutes from './routes/leave.js';
 import coordinatorRoutes from './routes/coordinator.js';
 import ApiError from './utils/ApiError.js';
+import { startAttendanceReminderScheduler } from './services/schedulerService.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -60,6 +61,7 @@ let server;
 const startServer = async () => {
   try {
     await connectDB();
+    startAttendanceReminderScheduler();
     server = app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
     });
@@ -83,6 +85,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('unhandledRejection', (err) => {
   logger.error({ error: err.message, stack: err.stack }, 'Unhandled Rejection');
+  process.exit(1);
 });
 process.on('uncaughtException', (err) => {
   logger.error({ error: err.message, stack: err.stack }, 'Uncaught Exception');

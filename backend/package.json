@@ -15,7 +15,13 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
   },
-  "keywords": ["attendance", "education", "nodejs", "mongodb", "express"],
+  "keywords": [
+    "attendance",
+    "education",
+    "nodejs",
+    "mongodb",
+    "express"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -28,10 +34,11 @@
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "mongo-sanitize": "^1.1.0",
     "mongoose": "^8.0.3",
     "mongoose-delete": "^1.0.2",
-    "mongo-sanitize": "^1.1.0",
     "morgan": "^1.10.0",
+    "node-cron": "^4.6.0",
     "nodemailer": "^6.9.7",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1"
@@ -51,8 +58,9 @@
   "jest": {
     "testEnvironment": "node",
     "transform": {},
-    "testMatch": ["**/tests/**/*.test.js"],
-
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
     "collectCoverageFrom": [
       "controllers/**/*.js",
       "services/**/*.js",

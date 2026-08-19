@@ -59,7 +59,7 @@ export const sendDefaulterEmail = async ({ to, subject: subjectLine, html }) => 
     logger.info({ to, subject: subjectLine }, 'Defaulter email sent');
     return { sent: true };
   } catch (err) {
-    logger.error({ error: err.message, to }, 'Defaulter email failed');
+    logger.error({ error: err.message, stack: err.stack, to, code: err.code, command: err.command }, 'Defaulter email failed');
     return { sent: false, reason: err.message };
   }
 };

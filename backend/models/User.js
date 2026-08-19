@@ -47,6 +47,7 @@ const userSchema = new Schema(
     passwordResetToken: String,
     passwordResetExpires: Date,
     passwordChangedAt: { type: Date },
+    lastAttendanceEmailAt: { type: Date },
   },
   { timestamps: true },
 );
