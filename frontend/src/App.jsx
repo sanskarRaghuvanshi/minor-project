@@ -34,6 +34,9 @@ const CoordinatorStudents = lazy(() => import('./components/coordinator/Coordina
 const CoordinatorFeedback = lazy(() => import('./components/coordinator/CoordinatorFeedback'));
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
 const UserManagement = lazy(() => import('./components/admin/UserManagement'));
+const QrGenerator = lazy(() => import('./components/faculty/QrGenerator'));
+const QrSessionView = lazy(() => import('./components/faculty/QrSessionView'));
+const ScanAttendancePage = lazy(() => import('./pages/ScanAttendancePage'));
 
 const Loading = () => <div className="page-loading"><Skeleton variant="card" height="400px" /></div>;
 
@@ -56,7 +59,7 @@ const App = () => (
                 <Route
                   path="/faculty"
                   element={
-                    <ProtectedRoute roles={['faculty']}>
+                    <ProtectedRoute roles={['faculty', 'coordinator', 'admin']}>
                       <FacultyDashboardPage />
                     </ProtectedRoute>
                   }
@@ -67,6 +70,8 @@ const App = () => (
                   <Route path="defaulters" element={<Defaulters />} />
                   <Route path="feedback-history" element={<FeedbackHistory />} />
                   <Route path="leave-requests" element={<LeaveRequests />} />
+                  <Route path="qr-generator" element={<QrGenerator />} />
+                  <Route path="qr-session/:token" element={<QrSessionView />} />
                 </Route>
 
                 <Route
@@ -84,6 +89,7 @@ const App = () => (
                   <Route path="eligibility" element={<EligibilityView />} />
                   <Route path="apply-leave" element={<ApplyLeave />} />
                   <Route path="my-leaves" element={<MyLeaves />} />
+                  <Route path="scan" element={<ScanAttendancePage />} />
                 </Route>
 
                 <Route
@@ -103,6 +109,8 @@ const App = () => (
                   <Route path="teachers" element={<CoordinatorTeachers />} />
                   <Route path="students" element={<CoordinatorStudents />} />
                   <Route path="feedback" element={<CoordinatorFeedback />} />
+                  <Route path="qr-generator" element={<QrGenerator />} />
+                  <Route path="qr-session/:token" element={<QrSessionView />} />
                 </Route>
 
                 <Route

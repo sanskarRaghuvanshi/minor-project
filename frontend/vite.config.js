@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/',
   server: {
     port: 3000,
     proxy: {
@@ -14,6 +15,8 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 500,
+    outDir: 'dist',
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {

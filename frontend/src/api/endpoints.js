@@ -37,6 +37,10 @@ export const ENDPOINTS = {
     FEEDBACK: `${BASE}/faculty/feedback`,
     FEEDBACK_HISTORY: `${BASE}/faculty/feedback-history`,
     DASHBOARD_STATS: `${BASE}/faculty/dashboard-stats`,
+    QR_GENERATE: `${BASE}/qr/generate`,
+    QR_ACTIVE: `${BASE}/qr/active`,
+    QR_SESSION: (token) => `${BASE}/qr/${token}`,
+    QR_END: (token) => `${BASE}/qr/${token}/end`,
   },
   COORDINATOR: {
     STUDENTS: `${BASE}/coordinator/students`,
@@ -47,6 +51,7 @@ export const ENDPOINTS = {
     MY_ATTENDANCE: `${BASE}/student/my-attendance`,
     STATS: `${BASE}/student/stats`,
     ELIGIBILITY: `${BASE}/student/eligibility`,
+    SCAN_ATTENDANCE: `${BASE}/qr/scan`,
   },
   HEALTH: `${BASE}/health`,
 };
