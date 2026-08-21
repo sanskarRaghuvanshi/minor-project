@@ -1,18 +1,35 @@
 import mongoose from 'mongoose';
 import logger from './logger.js';
 
-const connectDB = async (retries = 5, delay = 5000) => {
+const connectDB = async (retries = 10, delay = 10000) => {
+  const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-attendance';
+
+  const maskCredentials = (u) => {
+    try {
+      // remove credentials for logs
+      return u.replace(/:\/\/(.*?):(.*?)@/, '://<user>:<redacted>@');
+    } catch (e) {
+      return u;
+    }
+  };
+
   let attempt = 0;
 
   while (attempt < retries) {
     try {
       attempt += 1;
-      const conn = await mongoose.connect(process.env.MONGO_URI, {
+      const conn = await mongoose.connect(uri, {
         maxPoolSize: 100,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 30000,
+        socketTimeoutMS: 45000,
+        family: 4,
       });
 
-      logger.info(`MongoDB connected: ${conn.connection.host}:${conn.connection.port}/${conn.connection.name}`);
+      const display = conn && conn.connection && conn.connection.name
+        ? `${conn.connection.name}`
+        : maskCredentials(uri);
+
+      logger.info(`MongoDB connected: ${display}`);
       return conn;
     } catch (err) {
       logger.error('MongoDB connection failed', { attempt, error: err.message });

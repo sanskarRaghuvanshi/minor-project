@@ -15,6 +15,7 @@ import studentRoutes from './routes/student.js';
 import adminRoutes from './routes/admin.js';
 import leaveRoutes from './routes/leave.js';
 import coordinatorRoutes from './routes/coordinator.js';
+import qrRoutes from './routes/qr.js';
 import ApiError from './utils/ApiError.js';
 import { startAttendanceReminderScheduler } from './services/schedulerService.js';
 
@@ -48,6 +49,7 @@ app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/leave', leaveRoutes);
 app.use('/api/v1/coordinator', coordinatorRoutes);
+app.use('/api/v1/qr', qrRoutes);
 
 // 404 handler
 app.use((_req, _res, next) => {
@@ -60,6 +62,8 @@ let server;
 
 const startServer = async () => {
   try {
+    logger.info('Waiting for MongoDB Atlas IP whitelist to propagate...');
+    await new Promise((resolve) => setTimeout(resolve, 5000));
     await connectDB();
     startAttendanceReminderScheduler();
     server = app.listen(PORT, () => {

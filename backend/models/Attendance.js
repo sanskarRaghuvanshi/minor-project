@@ -34,6 +34,15 @@ const attendanceSchema = new Schema(
       maxlength: [500, 'Correction reason cannot exceed 500 characters'],
     },
     isActive: { type: Boolean, default: true },
+    source: {
+      type: String,
+      enum: ['manual', 'qr'],
+      default: 'manual',
+    },
+    qrSession: {
+      type: Schema.Types.ObjectId,
+      ref: 'QrSession',
+    },
   },
   {
     timestamps: true,
@@ -44,6 +53,8 @@ const attendanceSchema = new Schema(
 attendanceSchema.index({ student: 1, subject: 1, date: 1 }, { unique: true });
 attendanceSchema.index({ markedBy: 1, date: -1 });
 attendanceSchema.index({ subject: 1, date: -1 });
+attendanceSchema.index({ qrSession: 1 });
+attendanceSchema.index({ source: 1 });
 
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 
