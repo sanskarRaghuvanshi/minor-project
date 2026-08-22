@@ -1,6 +1,44 @@
 import { getTransporter, getFromAddress, isEmailConfigured } from '../config/nodemailer.js';
 import logger from '../config/logger.js';
 
+const parseFrom = (from) => {
+  const match = String(from || '').match(/^(.*?)<(.+)>$/);
+  if (match) {
+    return { name: match[1].trim(), email: match[2].trim() };
+  }
+  return { email: String(from || '').trim() };
+};
+
+const sendViaBrevo = async ({ from, to, subject, html }) => {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({
+      sender: parseFrom(from),
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Brevo API error ${res.status}: ${body}`);
+  }
+  return res.json();
+};
+
+const sendMail = async ({ from, to, subject, html }) => {
+  if (process.env.BREVO_API_KEY) {
+    return sendViaBrevo({ from, to, subject, html });
+  }
+  return getTransporter().sendMail({ from, to, subject, html });
+};
+
+
 const generateDefaulterEmailHtml = ({
   studentName,
   subjects,
@@ -46,10 +84,9 @@ export const sendDefaulterEmail = async ({ to, subject: subjectLine, html }) => 
   }
 
   try {
-    const transporter = getTransporter();
     const from = getFromAddress();
 
-    await transporter.sendMail({
+    await sendMail({
       from,
       to,
       subject: subjectLine || 'Attendance Warning',
@@ -93,9 +130,8 @@ export const sendPasswordResetEmail = async ({ to, resetUrl }) => {
   }
 
   try {
-    const transporter = getTransporter();
     const from = getFromAddress();
-    await transporter.sendMail({ from, to, subject, html });
+    await sendMail({ from, to, subject, html });
     logger.info({ to, subject }, 'Password reset email sent');
     return { sent: true };
   } catch (err) {
