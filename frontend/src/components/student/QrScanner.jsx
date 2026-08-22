@@ -16,6 +16,20 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   const html5QrcodeRef = useRef(null);
   const isMountedRef = useRef(true);
 
+  const stopScanner = useCallback(async () => {
+    if (html5QrcodeRef.current) {
+      try {
+        await html5QrcodeRef.current.stop();
+      } catch (err) {
+        console.error('Failed to stop scanner:', err);
+      }
+      html5QrcodeRef.current = null;
+    }
+    if (isMountedRef.current) {
+      setScanning(false);
+    }
+  }, []);
+
   const handleScanSuccess = useCallback(async (decodedText) => {
     if (!isMountedRef.current) return;
     if (lastScanned === decodedText) return;
@@ -110,10 +124,9 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         },
       });
 
-      // Permission granted - stop the preview stream immediately
+      // Permission granted - stop the stream immediately
       // html5-qrcode will request its own stream
       stream.getTracks().forEach((track) => track.stop());
-      previewStreamRef.current = null;
 
       if (isMountedRef.current) {
         setPermissionState('granted');
@@ -221,7 +234,6 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     return () => {
       isMountedRef.current = false;
       stopScanner();
-      stopPreviewStream();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
