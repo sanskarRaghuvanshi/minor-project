@@ -13,15 +13,13 @@ const devFormat = printf(({ level, message, timestamp: ts, ...metadata }) => {
   return log;
 });
 
-const transports = [];
+const transports = [
+  new winston.transports.Console({
+    format: combine(colorize(), timestamp(), devFormat),
+  }),
+];
 
-if (isDev) {
-  transports.push(
-    new winston.transports.Console({
-      format: combine(colorize(), timestamp(), devFormat),
-    }),
-  );
-} else {
+if (!isDev) {
   transports.push(
     new DailyRotateFile({
       filename: 'logs/application-%DATE%.log',

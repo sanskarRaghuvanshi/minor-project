@@ -22,6 +22,8 @@ import { startAttendanceReminderScheduler } from './services/schedulerService.js
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.set('trust proxy', 1);
+
 // SECURITY → PARSING → LOGGING → RATE LIMIT → ROUTES → ERROR HANDLER
 securityMiddlewares.forEach((mw) => app.use(mw));
 app.use(sanitizeBody);
