@@ -11,10 +11,11 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   const [lastScanned, setLastScanned] = useState(null);
   const [availableCameras, setAvailableCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState(null);
-  const [permissionState, setPermissionState] = useState('prompt'); // 'prompt' | 'granted' | 'denied'
-  const [showCameraSelect, setShowCameraSelect] = useState(false);
+  const [permissionState, setPermissionState] = useState('prompt');
   const html5QrcodeRef = useRef(null);
   const isMountedRef = useRef(true);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
   const stopScanner = useCallback(async () => {
     if (html5QrcodeRef.current) {
@@ -24,6 +25,14 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         console.error('Failed to stop scanner:', err);
       }
       html5QrcodeRef.current = null;
+    }
+    // Stop our video stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     if (isMountedRef.current) {
       setScanning(false);
@@ -177,7 +186,49 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) return;
 
+    if (!videoRef.current) {
+      console.error('Video ref not available');
+      return;
+    }
+
     try {
+      // Try multiple camera configs for getUserMedia
+      const cameraConfigs = [];
+
+      if (selectedCameraId) {
+        cameraConfigs.push({ deviceId: { exact: selectedCameraId } });
+      }
+      cameraConfigs.push({ facingMode: 'environment' });
+      cameraConfigs.push({ facingMode: 'user' });
+      cameraConfigs.push({});
+
+      let stream;
+      let lastError;
+      
+      for (const cameraConfig of cameraConfigs) {
+        try {
+          console.log('Trying getUserMedia with config:', cameraConfig);
+          stream = await navigator.mediaDevices.getUserMedia({ video: cameraConfig });
+          console.log('getUserMedia success with:', cameraConfig);
+          break;
+        } catch (err) {
+          lastError = err;
+          console.warn('getUserMedia failed:', cameraConfig, err);
+          continue;
+        }
+      }
+
+      if (!stream) {
+        throw lastError || new Error('Failed to get camera stream');
+      }
+
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+      
+      await videoRef.current.play();
+      console.log('Video playing, dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+
+      // Now start html5-qrcode with the video element
       const html5Qrcode = new Html5Qrcode('qr-reader');
       html5QrcodeRef.current = html5Qrcode;
 
@@ -187,46 +238,27 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         rememberLastUsedCamera: true,
       };
 
-      // Try multiple camera configs in order of preference
-      const cameraConfigs = [];
+      // Use the video element we already have playing
+      await html5Qrcode.start(
+        videoRef.current,
+        config,
+        handleScanSuccess,
+        handleScanError,
+      );
 
-      if (selectedCameraId) {
-        cameraConfigs.push({ deviceId: { exact: selectedCameraId } });
-      }
-      // Always try facingMode environment (back camera)
-      cameraConfigs.push({ facingMode: 'environment' });
-      // Fallback to user (front camera)
-      cameraConfigs.push({ facingMode: 'user' });
-      // Last resort: any camera
-      cameraConfigs.push({});
-
-      let lastError;
-      for (const cameraConfig of cameraConfigs) {
-        try {
-          console.log('Trying camera config:', cameraConfig);
-          await html5Qrcode.start(
-            cameraConfig,
-            config,
-            handleScanSuccess,
-            handleScanError,
-          );
-          console.log('Scanner started with config:', cameraConfig);
-          break;
-        } catch (err) {
-          lastError = err;
-          console.warn('Camera config failed:', cameraConfig, err);
-          continue;
-        }
-      }
-
-      if (html5QrcodeRef.current && isMountedRef.current) {
+      if (isMountedRef.current) {
         setScanning(true);
         setError('');
-      } else if (lastError) {
-        throw lastError;
       }
     } catch (err) {
       console.error('Failed to start scanner:', err);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
       if (isMountedRef.current) {
         const msg = err.name === 'OverconstrainedError' 
           ? 'No suitable camera found. Try switching cameras.' 
@@ -264,7 +296,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   
 
   // Always render the qr-reader element so it exists when html5-qrcode starts
-  // When scanning, make it visible container for video; otherwise keep it tiny/hidden
+  // When scanning, use our own video element; otherwise keep it tiny/hidden
   const qrReaderElement = scanning ? (
     <div
       id="qr-reader"
@@ -278,7 +310,20 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         background: '#000',
         margin: '0 auto 16px',
       }}
-    />
+    >
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          transform: 'rotateY(0deg)',
+        }}
+      />
+    </div>
   ) : (
     <div id="qr-reader" style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} />
   );
@@ -343,7 +388,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         {/* Video container + scanning overlay */}
         <div style={{ position: 'relative', marginBottom: '16px' }}>
           {qrReaderElement}
-          {/* Scanning overlay - positioned over the video in #qr-reader */}
+          {/* Scanning overlay - positioned over the video container */}
           <div
             style={{
               position: 'absolute',
