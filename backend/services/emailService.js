@@ -99,7 +99,7 @@ export const sendPasswordResetEmail = async ({ to, resetUrl }) => {
     logger.info({ to, subject }, 'Password reset email sent');
     return { sent: true };
   } catch (err) {
-    logger.error({ error: err.message, to }, 'Password reset email failed');
+    logger.error('Password reset email failed', { error: err.message, code: err.code, command: err.command, to });
     return { sent: false, reason: err.message };
   }
 };
