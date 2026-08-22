@@ -240,7 +240,22 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   
 
   // Always render the qr-reader element so it exists when html5-qrcode starts
-  const qrReaderElement = (
+  // When scanning, make it visible container for video; otherwise keep it tiny/hidden
+  const qrReaderElement = scanning ? (
+    <div
+      id="qr-reader"
+      style={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: '440px',
+        aspectRatio: '4/3',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        background: '#000',
+        margin: '0 auto 16px',
+      }}
+    />
+  ) : (
     <div id="qr-reader" style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} />
   );
 
@@ -300,10 +315,11 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
 
   return (
     <>
-      {qrReaderElement}
       <div className="qr-scanner" style={{ maxWidth: '440px', margin: '0 auto' }}>
-        {/* Camera Preview Area - html5-qrcode renders its own video inside #qr-reader */}
-        <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '16px', minHeight: '300px' }}>
+        {/* Video container + scanning overlay */}
+        <div style={{ position: 'relative', marginBottom: '16px' }}>
+          {qrReaderElement}
+          {/* Scanning overlay - positioned over the video in #qr-reader */}
           <div
             style={{
               position: 'absolute',
@@ -317,6 +333,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
               justifyContent: 'center',
               pointerEvents: 'none',
               padding: '20px',
+              borderRadius: '12px',
             }}
           >
             <div
@@ -333,13 +350,13 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
               Camera active — point at QR code
             </p>
           </div>
-          <style jsx global>{`
-            @keyframes scan-pulse {
-              0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px var(--primary, #2563eb); }
-              50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 40px var(--primary, #2563eb); }
-            }
-          `}</style>
         </div>
+        <style jsx global>{`
+          @keyframes scan-pulse {
+            0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px var(--primary, #2563eb); }
+            50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 40px var(--primary, #2563eb); }
+          }
+        `}</style>
 
         {/* Camera selector */}
         {availableCameras.length > 1 && (
