@@ -83,6 +83,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter((d) => d.kind === 'videoinput');
+      console.log('Available cameras:', videoDevices.map(d => ({ id: d.deviceId, label: d.label })));
       if (isMountedRef.current) {
         setAvailableCameras(videoDevices);
         if (videoDevices.length > 0 && !selectedCameraId) {
@@ -115,13 +116,9 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     setError('Requesting camera permission...');
 
     try {
-      // Request permission with back camera preference
+      // Request permission with lenient constraints first
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
+        video: true,
       });
 
       // Permission granted - stop the stream immediately
@@ -190,25 +187,52 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         rememberLastUsedCamera: true,
       };
 
-      // Use selected camera or let html5-qrcode pick
-      const cameraConfig = selectedCameraId ? { deviceId: { exact: selectedCameraId } } : { facingMode: 'environment' };
+      // Try multiple camera configs in order of preference
+      const cameraConfigs = [];
 
-      await html5Qrcode.start(
-        cameraConfig,
-        config,
-        handleScanSuccess,
-        handleScanError,
-      );
+      if (selectedCameraId) {
+        cameraConfigs.push({ deviceId: { exact: selectedCameraId } });
+      }
+      // Always try facingMode environment (back camera)
+      cameraConfigs.push({ facingMode: 'environment' });
+      // Fallback to user (front camera)
+      cameraConfigs.push({ facingMode: 'user' });
+      // Last resort: any camera
+      cameraConfigs.push({});
 
-      if (isMountedRef.current) {
+      let lastError;
+      for (const cameraConfig of cameraConfigs) {
+        try {
+          console.log('Trying camera config:', cameraConfig);
+          await html5Qrcode.start(
+            cameraConfig,
+            config,
+            handleScanSuccess,
+            handleScanError,
+          );
+          console.log('Scanner started with config:', cameraConfig);
+          break;
+        } catch (err) {
+          lastError = err;
+          console.warn('Camera config failed:', cameraConfig, err);
+          continue;
+        }
+      }
+
+      if (html5QrcodeRef.current && isMountedRef.current) {
         setScanning(true);
         setError('');
+      } else if (lastError) {
+        throw lastError;
       }
     } catch (err) {
       console.error('Failed to start scanner:', err);
       if (isMountedRef.current) {
-        setError('Failed to start scanner. Please try again.');
-        addToast('Failed to start scanner', 'error');
+        const msg = err.name === 'OverconstrainedError' 
+          ? 'No suitable camera found. Try switching cameras.' 
+          : 'Failed to start scanner. Please try again.';
+        setError(msg);
+        addToast(msg, 'error');
       }
     }
   }, [requestCameraPermission, selectedCameraId, handleScanSuccess, handleScanError, addToast]);
