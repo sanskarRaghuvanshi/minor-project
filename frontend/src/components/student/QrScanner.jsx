@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import jsQR from 'jsqr';
 import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useToast } from '../common/Toast';
@@ -12,21 +12,19 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   const [availableCameras, setAvailableCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState(null);
   const [permissionState, setPermissionState] = useState('prompt');
-  const html5QrcodeRef = useRef(null);
   const isMountedRef = useRef(true);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const canvasRef = useRef(null);
+  const rafRef = useRef(null);
+  const lastScanRef = useRef(0);
+  const SCAN_INTERVAL_MS = 1000 / 15;
 
   const stopScanner = useCallback(async () => {
-    if (html5QrcodeRef.current) {
-      try {
-        await html5QrcodeRef.current.stop();
-      } catch (err) {
-        console.error('Failed to stop scanner:', err);
-      }
-      html5QrcodeRef.current = null;
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     }
-    // Stop our video stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -113,7 +111,6 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
       return false;
     }
 
-    // Check if we're in a secure context
     const isSecureContext = window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     if (!isSecureContext) {
       setError('Camera requires HTTPS. Please access via the Vercel deployment URL.');
@@ -125,13 +122,10 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     setError('Requesting camera permission...');
 
     try {
-      // Request permission with lenient constraints first
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
       });
 
-      // Permission granted - stop the stream immediately
-      // html5-qrcode will request its own stream
       stream.getTracks().forEach((track) => track.stop());
 
       if (isMountedRef.current) {
@@ -155,7 +149,6 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         message = 'Camera is in use by another app. Close other apps and try again.';
         setPermissionState('denied');
       } else if (err.name === 'OverconstrainedError') {
-        // Try without facingMode constraint
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           stream.getTracks().forEach((track) => track.stop());
@@ -180,9 +173,60 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     }
   }, [enumerateCameras, addToast]);
 
-  const startScanner = useCallback(async () => {
-    if (html5QrcodeRef.current) return;
+  const scanLoop = useCallback((timestamp) => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      rafRef.current = requestAnimationFrame(scanLoop);
+      return;
+    }
+    if (timestamp - lastScanRef.current < SCAN_INTERVAL_MS) {
+      rafRef.current = requestAnimationFrame(scanLoop);
+      return;
+    }
+    lastScanRef.current = timestamp;
 
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) {
+      rafRef.current = requestAnimationFrame(scanLoop);
+      return;
+    }
+
+    const containerEl = video.parentElement;
+    const containerRect = containerEl.getBoundingClientRect();
+    const scale = Math.max(containerRect.width / vw, containerRect.height / vh);
+    const renderedW = vw * scale;
+    const renderedH = vh * scale;
+    const offsetX = (renderedW - containerRect.width) / 2;
+    const offsetY = (renderedH - containerRect.height) / 2;
+
+    const boxSize = 280;
+    const cropCSSx = (containerRect.width - boxSize) / 2;
+    const cropCSSy = (containerRect.height - boxSize) / 2;
+
+    const sx = (cropCSSx + offsetX) / scale;
+    const sy = (cropCSSy + offsetY) / scale;
+    const sSize = boxSize / scale;
+
+    canvas.width = sSize;
+    canvas.height = sSize;
+    const ctx = canvas.getContext('2d');
+    try {
+      ctx.drawImage(video, sx, sy, sSize, sSize, 0, 0, sSize, sSize);
+      const imageData = ctx.getImageData(0, 0, sSize, sSize);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+      if (code) {
+        handleScanSuccess(code.data);
+      }
+    } catch (err) {
+      console.debug('Frame decode skipped:', err);
+    }
+
+    rafRef.current = requestAnimationFrame(scanLoop);
+  }, [handleScanSuccess]);
+
+  const startScanner = useCallback(async () => {
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) return;
 
@@ -192,7 +236,6 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     }
 
     try {
-      // Try multiple camera configs for getUserMedia
       const cameraConfigs = [];
 
       if (selectedCameraId) {
@@ -228,27 +271,10 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
       await videoRef.current.play();
       console.log('Video playing, dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
 
-      // Now start html5-qrcode with the video element
-      const html5Qrcode = new Html5Qrcode('qr-reader');
-      html5QrcodeRef.current = html5Qrcode;
-
-      const config = {
-        fps: 15,
-        qrbox: { width: 280, height: 280 },
-        rememberLastUsedCamera: true,
-      };
-
-      // Use the video element we already have playing
-      await html5Qrcode.start(
-        videoRef.current,
-        config,
-        handleScanSuccess,
-        handleScanError,
-      );
-
       if (isMountedRef.current) {
         setScanning(true);
         setError('');
+        rafRef.current = requestAnimationFrame(scanLoop);
       }
     } catch (err) {
       console.error('Failed to start scanner:', err);
@@ -261,7 +287,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
       }
       if (isMountedRef.current) {
         const msg = err.name === 'OverconstrainedError' 
-          ? 'No suitable camera found. Try switching cameras.' 
+          ? 'No suitable camera found. Try switching cameras.'
           : 'Failed to start scanner. Please try again.';
         setError(msg);
         addToast(msg, 'error');
@@ -291,12 +317,8 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
       isMountedRef.current = false;
       stopScanner();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  
-
-  // Always render the video element so ref is available when startScanner runs
-  // Visibility controlled by scanning state
   const qrReaderElement = (
     <div
       id="qr-reader"
@@ -324,6 +346,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
           transform: 'rotateY(0deg)',
         }}
       />
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );
 
@@ -373,7 +396,8 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         {qrReaderElement}
         <div className="qr-scanner" style={{ textAlign: 'center', padding: '32px 16px', maxWidth: '400px', margin: '0 auto' }}>
           <div className="spinner" style={{ margin: '0 auto 16px', width: '40px', height: '40px', borderWidth: '4px' }} />
-          <p style={{ color: 'var(--text-secondary)' }}>
+          <p style={{ color: 'var(--text-secondary)',
+ }}>
             {permissionState === 'prompt' ? 'Requesting camera permission...' : 'Starting camera...'}
           </p>
         </div>
@@ -385,9 +409,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     <>
       {qrReaderElement}
       <div className="qr-scanner" style={{ maxWidth: '440px', margin: '0 auto' }}>
-        {/* Video container + scanning overlay */}
         <div style={{ position: 'relative', marginBottom: '16px' }}>
-          {/* Scanning overlay - positioned over the video container */}
           <div
             style={{
               position: 'absolute',
@@ -419,17 +441,15 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
             </p>
           </div>
         </div>
-        <style jsx global>{`
-          @keyframes scan-pulse {
+        <style jsx global>{`\''@keyframes scan-pulse {
             0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px var(--primary, #2563eb); }
             50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 40px var(--primary, #2563eb); }
-          }
-        `}</style>
+          }'`}</style>
 
-        {/* Camera selector */}
         {availableCameras.length > 1 && (
           <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Camera:</label>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)'
+ }}>Camera:</label>
             <select
               value={selectedCameraId || ''}
               onChange={(e) => switchCamera(e.target.value || undefined)}
@@ -446,7 +466,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
             >
               {availableCameras.map((cam) => (
                 <option key={cam.deviceId} value={cam.deviceId}>
-                  {cam.label || `Camera ${availableCameras.indexOf(cam) + 1}`}
+                  {cam.label || `\''Camera ${availableCameras.indexOf(cam) + 1}'`}
                 </option>
               ))}
             </select>
