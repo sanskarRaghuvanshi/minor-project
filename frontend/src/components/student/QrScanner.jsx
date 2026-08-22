@@ -295,9 +295,9 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
 
   
 
-  // Always render the qr-reader element so it exists when html5-qrcode starts
-  // When scanning, use our own video element; otherwise keep it tiny/hidden
-  const qrReaderElement = scanning ? (
+  // Always render the video element so ref is available when startScanner runs
+  // Visibility controlled by scanning state
+  const qrReaderElement = (
     <div
       id="qr-reader"
       style={{
@@ -309,6 +309,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         overflow: 'hidden',
         background: '#000',
         margin: '0 auto 16px',
+        display: scanning ? 'block' : 'none',
       }}
     >
       <video
@@ -324,8 +325,6 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         }}
       />
     </div>
-  ) : (
-    <div id="qr-reader" style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} />
   );
 
   if (permissionState === 'denied') {
@@ -384,10 +383,10 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
 
   return (
     <>
+      {qrReaderElement}
       <div className="qr-scanner" style={{ maxWidth: '440px', margin: '0 auto' }}>
         {/* Video container + scanning overlay */}
         <div style={{ position: 'relative', marginBottom: '16px' }}>
-          {qrReaderElement}
           {/* Scanning overlay - positioned over the video container */}
           <div
             style={{
