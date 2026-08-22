@@ -5,10 +5,18 @@ const { combine, timestamp, json, errors, printf, colorize } = winston.format;
 
 const isDev = process.env.NODE_ENV === 'development';
 
-const devFormat = printf(({ level, message, timestamp: ts, ...metadata }) => {
-  let log = `${ts} [${level}]: ${message}`;
-  if (Object.keys(metadata).length) {
-    log += ` ${JSON.stringify(metadata)}`;
+const devFormat = printf((info) => {
+  const { level, message, timestamp: ts, ...rest } = info;
+  let msg = message;
+  let meta = rest;
+  if (msg && typeof msg === 'object') {
+    const { message: innerMessage, ...objMeta } = msg;
+    msg = innerMessage ?? JSON.stringify(objMeta);
+    meta = { ...objMeta, ...rest };
+  }
+  let log = `${ts} [${level}]: ${msg}`;
+  if (Object.keys(meta).length) {
+    log += ` ${JSON.stringify(meta)}`;
   }
   return log;
 });
