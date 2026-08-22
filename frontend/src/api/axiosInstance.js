@@ -21,7 +21,10 @@ export const refreshAccessToken = async () => {
   if (!refreshToken) {
     throw new Error('No refresh token available');
   }
-  const { data } = await axios.post('/api/v1/auth/refresh', { refreshToken });
+  const { data } = await axios.post(
+    `${import.meta.env.VITE_API_BASE_URL || ''}/api/v1/auth/refresh`,
+    { refreshToken },
+  );
   const { token, refreshToken: newRefresh } = data.data;
   localStorage.setItem('token', token);
   localStorage.setItem('refreshToken', newRefresh);
