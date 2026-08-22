@@ -100,12 +100,6 @@ const Login = () => {
         </form>
         <div className="auth-card__footer">
           <p>Don&apos;t have an account? <Link to="/register/student">Register</Link></p>
-          <div className="auth-card__test-credits">
-            <p><strong>Test Credentials:</strong></p>
-            <p>Admin: admin@test.com / admin123</p>
-            <p>Faculty: faculty@test.com / faculty123</p>
-            <p>Student: student@test.com / student123</p>
-          </div>
         </div>
       </div>
     </div>
