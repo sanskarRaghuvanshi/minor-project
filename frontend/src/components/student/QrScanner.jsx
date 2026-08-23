@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import jsQR from 'jsqr';
+import { Html5Qrcode } from 'html5-qrcode';
 import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useToast } from '../common/Toast';
@@ -13,24 +13,16 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   const [selectedCameraId, setSelectedCameraId] = useState(null);
   const [permissionState, setPermissionState] = useState('prompt');
   const isMountedRef = useRef(true);
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const canvasRef = useRef(null);
-  const rafRef = useRef(null);
-  const lastScanRef = useRef(0);
-  const SCAN_INTERVAL_MS = 1000 / 15;
+  const html5QrcodeRef = useRef(null);
 
   const stopScanner = useCallback(async () => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+    if (html5QrcodeRef.current) {
+      try {
+        await html5QrcodeRef.current.stop();
+      } catch (err) {
+        console.error('Failed to stop scanner:', err);
+      }
+      html5QrcodeRef.current = null;
     }
     if (isMountedRef.current) {
       setScanning(false);
@@ -173,120 +165,58 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
     }
   }, [enumerateCameras, addToast]);
 
-  const scanLoop = useCallback((timestamp) => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
-      rafRef.current = requestAnimationFrame(scanLoop);
-      return;
-    }
-    if (timestamp - lastScanRef.current < SCAN_INTERVAL_MS) {
-      rafRef.current = requestAnimationFrame(scanLoop);
-      return;
-    }
-    lastScanRef.current = timestamp;
-
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    if (!vw || !vh) {
-      rafRef.current = requestAnimationFrame(scanLoop);
-      return;
-    }
-
-    const containerEl = video.parentElement;
-    const containerRect = containerEl.getBoundingClientRect();
-    const scale = Math.max(containerRect.width / vw, containerRect.height / vh);
-    const renderedW = vw * scale;
-    const renderedH = vh * scale;
-    const offsetX = (renderedW - containerRect.width) / 2;
-    const offsetY = (renderedH - containerRect.height) / 2;
-
-    const boxSize = 280;
-    const cropCSSx = (containerRect.width - boxSize) / 2;
-    const cropCSSy = (containerRect.height - boxSize) / 2;
-
-    const sx = (cropCSSx + offsetX) / scale;
-    const sy = (cropCSSy + offsetY) / scale;
-    const sSize = boxSize / scale;
-
-    canvas.width = sSize;
-    canvas.height = sSize;
-    const ctx = canvas.getContext('2d');
-    try {
-      ctx.drawImage(video, sx, sy, sSize, sSize, 0, 0, sSize, sSize);
-      const imageData = ctx.getImageData(0, 0, sSize, sSize);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
-      if (code) {
-        handleScanSuccess(code.data);
-      }
-    } catch (err) {
-      console.debug('Frame decode skipped:', err);
-    }
-
-    rafRef.current = requestAnimationFrame(scanLoop);
-  }, [handleScanSuccess]);
-
   const startScanner = useCallback(async () => {
+    if (html5QrcodeRef.current) return;
+
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) return;
 
-    if (!videoRef.current) {
-      console.error('Video ref not available');
-      return;
-    }
-
     try {
-      const cameraConfigs = [];
+      const html5Qrcode = new Html5Qrcode('qr-reader');
+      html5QrcodeRef.current = html5Qrcode;
 
+      const config = {
+        fps: 15,
+        qrbox: { width: 280, height: 280 },
+        rememberLastUsedCamera: true,
+      };
+
+      const cameraConfigs = [];
       if (selectedCameraId) {
-        cameraConfigs.push({ deviceId: { exact: selectedCameraId } });
+        cameraConfigs.push(selectedCameraId);
       }
       cameraConfigs.push({ facingMode: 'environment' });
       cameraConfigs.push({ facingMode: 'user' });
       cameraConfigs.push({});
 
-      let stream;
+      let started = false;
       let lastError;
-      
+
       for (const cameraConfig of cameraConfigs) {
         try {
-          console.log('Trying getUserMedia with config:', cameraConfig);
-          stream = await navigator.mediaDevices.getUserMedia({ video: cameraConfig });
-          console.log('getUserMedia success with:', cameraConfig);
+          console.log('Trying camera config:', cameraConfig);
+          await html5Qrcode.start(cameraConfig, config, handleScanSuccess, handleScanError);
+          console.log('Scanner started with config:', cameraConfig);
+          started = true;
           break;
         } catch (err) {
           lastError = err;
-          console.warn('getUserMedia failed:', cameraConfig, err);
-          continue;
+          console.warn('Camera config failed:', cameraConfig, err);
         }
       }
 
-      if (!stream) {
-        throw lastError || new Error('Failed to get camera stream');
+      if (!started) {
+        throw lastError || new Error('No working camera config found');
       }
-
-      streamRef.current = stream;
-      videoRef.current.srcObject = stream;
-      
-      await videoRef.current.play();
-      console.log('Video playing, dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
 
       if (isMountedRef.current) {
         setScanning(true);
         setError('');
-        rafRef.current = requestAnimationFrame(scanLoop);
       }
     } catch (err) {
       console.error('Failed to start scanner:', err);
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
       if (isMountedRef.current) {
-        const msg = err.name === 'OverconstrainedError' 
+        const msg = err.name === 'OverconstrainedError'
           ? 'No suitable camera found. Try switching cameras.'
           : 'Failed to start scanner. Please try again.';
         setError(msg);
@@ -333,21 +263,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         margin: '0 auto 16px',
         display: scanning ? 'block' : 'none',
       }}
-    >
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          transform: 'rotateY(0deg)',
-        }}
-      />
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-    </div>
+    />
   );
 
   if (permissionState === 'denied') {
