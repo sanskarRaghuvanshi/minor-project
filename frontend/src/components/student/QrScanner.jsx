@@ -261,7 +261,9 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         overflow: 'hidden',
         background: '#000',
         margin: '0 auto 16px',
-        display: scanning ? 'block' : 'none',
+        opacity: scanning ? 1 : 0,
+        pointerEvents: scanning ? 'auto' : 'none',
+        minHeight: '330px',
       }}
     />
   );
