@@ -8,7 +8,7 @@ const CRON_EXPR = process.env.REMINDER_CRON || '* * * * *';
 const THRESHOLD = Number(process.env.REMINDER_THRESHOLD) || 75;
 const BATCH_SIZE = Number(process.env.REMINDER_BATCH_SIZE) || 50;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
-const COOLDOWN_DAYS = Number(process.env.REMINDER_COOLDOWN_DAYS ?? 14);
+const COOLDOWN_DAYS = Number(process.env.REMINDER_COOLDOWN_DAYS ?? 1);
 
 export const startAttendanceReminderScheduler = () => {
   if (process.env.ENABLE_ATTENDANCE_REMINDER !== 'true') {
