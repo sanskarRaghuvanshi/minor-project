@@ -1,0 +1,546 @@
+/* ===== Stitch AI Exact Landing Page Styles ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+:root {
+  --sa-primary: #003594;
+  --sa-primary-container: #004ac6;
+  --sa-on-primary: #ffffff;
+  --sa-on-primary-container: #b8c8ff;
+  --sa-primary-fixed: #dbe1ff;
+  --sa-secondary-container: #d4e3ff;
+  --sa-on-secondary-container: #56657c;
+  --sa-tertiary-container: #943700;
+  --sa-on-tertiary-container: #ffba9d;
+  --sa-background: #f7f9fb;
+  --sa-surface: #f7f9fb;
+  --sa-surface-card: #ffffff;
+  --sa-surface-variant: #e0e3e5;
+  --sa-surface-container-high: #e6e8ea;
+  --sa-surface-container-low: #f2f4f6;
+  --sa-on-surface: #191c1e;
+  --sa-on-surface-variant: #434654;
+  --sa-outline: #737685;
+  --sa-outline-variant: #c3c6d6;
+  --sa-live-blue: #1b55d0;
+}
+
+.smartattend-landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--sa-background);
+  color: var(--sa-on-surface);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ===== Decorative Dot Grid Background ===== */
+.landing-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--sa-outline-variant) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== Header & Top Navigation ===== */
+.smartattend-nav-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  background: var(--sa-background);
+  border-bottom: 1px solid var(--sa-outline-variant);
+}
+
+.smartattend-nav {
+  max-width: 1440px;
+  margin: 0 auto;
+  height: 64px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.smartattend-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.smartattend-logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--sa-primary);
+  letter-spacing: -0.02em;
+}
+
+.smartattend-nav-links {
+  display: none;
+  align-items: center;
+  gap: 32px;
+}
+
+@media (min-width: 768px) {
+  .smartattend-nav-links {
+    display: flex;
+  }
+}
+
+.smartattend-nav-link {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--sa-on-surface-variant);
+  text-decoration: none;
+  transition: color 0.15s ease;
+  padding-bottom: 4px;
+}
+
+.smartattend-nav-link:hover {
+  color: var(--sa-primary);
+}
+
+.smartattend-nav-link.active {
+  color: var(--sa-primary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--sa-primary);
+}
+
+.smartattend-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--sa-on-surface-variant);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background-color: var(--sa-surface-container-low);
+  color: var(--sa-on-surface);
+}
+
+.btn-contact-sales {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  background-color: var(--sa-primary);
+  color: var(--sa-on-primary);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.btn-contact-sales:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+/* ===== Main Canvas & Hero Section ===== */
+.smartattend-main {
+  flex: 1;
+  position: relative;
+  z-index: 10;
+}
+
+.smartattend-hero {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 48px 24px 80px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+
+@media (min-width: 1024px) {
+  .smartattend-hero {
+    flex-direction: row;
+    align-items: center;
+    padding: 72px 32px 120px 32px;
+    gap: 64px;
+  }
+}
+
+/* Left Column */
+.hero-left-column {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  z-index: 10;
+}
+
+@media (min-width: 1024px) {
+  .hero-left-column {
+    width: 50%;
+  }
+}
+
+.hero-badge {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--sa-primary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-heading {
+  font-size: 34px;
+  line-height: 42px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--sa-on-surface);
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .hero-heading {
+    font-size: 40px;
+    line-height: 48px;
+  }
+}
+
+.hero-description {
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--sa-on-surface-variant);
+  max-width: 560px;
+  margin: 0;
+}
+
+/* Bento Style CTAs */
+.bento-portal-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+@media (min-width: 640px) {
+  .bento-portal-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.bento-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 20px 16px;
+  background: var(--sa-surface-card);
+  border-radius: 6px;
+  border: 1px solid var(--sa-outline-variant);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.bento-card:hover {
+  border-color: var(--sa-primary);
+  background-color: #f1f5ff;
+  box-shadow: 0 6px 16px rgba(0, 53, 148, 0.08);
+  transform: translateY(-2px);
+}
+
+.bento-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.bento-icon-wrapper .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.faculty-icon {
+  background-color: #e5eeff;
+  color: var(--sa-primary);
+}
+
+.student-icon {
+  background-color: var(--sa-secondary-container);
+  color: #1e3a8a;
+}
+
+.admin-icon {
+  background-color: #ffe6db;
+  color: var(--sa-tertiary-container);
+}
+
+.bento-card-title {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--sa-on-surface);
+  margin: 0;
+  transition: color 0.15s ease;
+}
+
+.bento-card:hover .bento-card-title {
+  color: var(--sa-primary);
+}
+
+.bento-card-subtitle {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--sa-on-surface-variant);
+}
+
+/* Right Column: Visuals */
+.hero-right-column {
+  width: 100%;
+  position: relative;
+  min-height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .hero-right-column {
+    width: 50%;
+    min-height: 480px;
+  }
+}
+
+.classroom-image-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(195, 198, 214, 0.4);
+}
+
+.classroom-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.94;
+}
+
+.classroom-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top right, rgba(247, 249, 251, 0.85) 0%, transparent 60%);
+}
+
+/* Floating Glassmorphic Live Session Card */
+.floating-live-card {
+  position: relative;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--sa-outline-variant);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.09);
+  max-width: 340px;
+  width: 100%;
+  transform: translateY(16px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+@media (min-width: 1024px) {
+  .floating-live-card {
+    transform: translate(-32px, 32px);
+  }
+}
+
+.floating-live-card:hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+}
+
+.live-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--sa-outline-variant);
+  padding-bottom: 8px;
+}
+
+.live-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-pulsing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--sa-live-blue);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+.live-status-label {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--sa-on-surface);
+}
+
+.live-course-name {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--sa-on-surface-variant);
+}
+
+/* Mock QR Code Container */
+.live-qr-viewport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.mock-qr-matrix {
+  width: 124px;
+  height: 124px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 8px;
+  border: 1px solid var(--sa-outline-variant);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.qr-grid-pattern {
+  position: absolute;
+  inset: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 3px;
+  opacity: 0.9;
+}
+
+.qr-cell {
+  border-radius: 2px;
+}
+
+.qr-cell.filled {
+  background-color: var(--sa-primary);
+}
+
+.qr-cell.light {
+  background-color: var(--sa-surface-variant);
+}
+
+.qr-cell.span-2 {
+  grid-column: span 2;
+}
+
+/* Scanning Laser Animation */
+.qr-scanning-laser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--sa-primary);
+  box-shadow: 0 0 10px rgba(0, 53, 148, 0.9);
+  z-index: 10;
+  animation: laser-scan 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes laser-scan {
+  0% { top: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Live Card Footer & Progress Bar */
+.live-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sa-outline-variant);
+}
+
+.progress-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-caption {
+  font-size: 13px;
+  color: var(--sa-on-surface-variant);
+  font-weight: 500;
+}
+
+.progress-percentage {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sa-primary);
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 6px;
+  background-color: var(--sa-surface-container-high);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--sa-primary);
+  border-radius: 9999px;
+  transition: width 0.6s ease;
+}
+
+.progress-details-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.detail-meta {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--sa-on-surface-variant);
+}
