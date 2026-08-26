@@ -28,7 +28,7 @@ if (!hasSmtpConfig) {
   logger.warn('SMTP not configured. Email operations will fall back to console logging.');
 }
 
-export const isEmailConfigured = () => Boolean(transporter);
+export const isEmailConfigured = () => Boolean(transporter) || Boolean(process.env.BREVO_API_KEY);
 
 export const getTransporter = () => transporter;
 

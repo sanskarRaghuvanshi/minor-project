@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin.js';
 import leaveRoutes from './routes/leave.js';
 import coordinatorRoutes from './routes/coordinator.js';
 import qrRoutes from './routes/qr.js';
+import systemRoutes from './routes/system.js';
 import ApiError from './utils/ApiError.js';
 import { startAttendanceReminderScheduler } from './services/schedulerService.js';
 
@@ -52,6 +53,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/leave', leaveRoutes);
 app.use('/api/v1/coordinator', coordinatorRoutes);
 app.use('/api/v1/qr', qrRoutes);
+app.use('/api/v1/system', systemRoutes);
 
 // 404 handler
 app.use((_req, _res, next) => {
