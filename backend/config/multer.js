@@ -1,11 +1,13 @@
 import multer from 'multer';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url); // eslint-disable-line no-underscore-dangle
 const __dirname = path.dirname(__filename); // eslint-disable-line no-underscore-dangle
 
 const uploadDir = path.join(__dirname, '..', 'uploads', 'leave-documents');
+fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),

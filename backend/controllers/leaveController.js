@@ -10,7 +10,7 @@ export const applyLeaveValidations = [
   body('startDate').isISO8601().withMessage('Start date must be valid'),
   body('endDate').isISO8601().withMessage('End date must be valid'),
   body('reason').trim().notEmpty().withMessage('Reason is required').isLength({ max: 500 }),
-  body('documentUrl').optional({ values: 'falsy' }).trim().isURL().withMessage('Document URL must be valid'),
+  body('documentUrl').optional({ values: 'falsy' }).trim().matches(/^\/uploads\//).withMessage('Document URL must be a valid upload path'),
 ];
 
 export const applyLeave = catchAsync(async (req, res) => {

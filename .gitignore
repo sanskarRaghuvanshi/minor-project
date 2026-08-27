@@ -47,3 +47,6 @@ data/
 # Temp
 tmp/
 temp/
+
+# Uploaded files
+backend/uploads/
