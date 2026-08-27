@@ -40,8 +40,9 @@ const StudentDashboard = () => {
     setUploading(true);
     event.target.value = '';
 
+    let html5Qrcode = null;
     try {
-      const html5Qrcode = new Html5Qrcode('qr-upload-reader');
+      html5Qrcode = new Html5Qrcode('qr-upload-reader');
       const result = await html5Qrcode.scanFile(file, true);
       
       if (result) {
@@ -52,7 +53,7 @@ const StudentDashboard = () => {
           throw new Error('Invalid QR code format');
         }
 
-        const { data } = await axiosInstance.post(ENDPOINTS.STUDENT.SCAN_ATTENDANCE, {
+        await axiosInstance.post(ENDPOINTS.STUDENT.SCAN_ATTENDANCE, {
           sessionToken,
         });
 
@@ -77,12 +78,18 @@ const StudentDashboard = () => {
       }
       addToast(errorMessage, 'error');
     } finally {
+      if (html5Qrcode) {
+        try { html5Qrcode.clear(); } catch (_) { /* ignore cleanup errors */ }
+      }
       setUploading(false);
     }
   };
 
   return (
     <div className="dashboard-home">
+      {/* Hidden element for Html5Qrcode.scanFile() — must exist in DOM at all times */}
+      <div id="qr-upload-reader" style={{ display: 'none' }} />
+
       <div className="dashboard-home__header">
         <h1>Welcome, {user?.name}</h1>
         <p className="text-secondary">{user?.branch} - {user?.className}{user?.section ? ` - ${user.section}` : ''}</p>
@@ -190,8 +197,6 @@ const StudentDashboard = () => {
             size="md"
           >
             <div style={{ textAlign: 'center', padding: '8px 0' }}>
-              <div id="qr-upload-reader" style={{ display: 'none' }} />
-              
               <div style={{ marginBottom: '16px' }}>
                 <label className="btn btn--secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   📁 Choose Screenshot
@@ -231,3 +236,4 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
+

@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import QrScanner from '../components/student/QrScanner';
 
 const ScanAttendancePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [scanResult, setScanResult] = useState(null);
 
   const handleScanSuccess = (data) => {

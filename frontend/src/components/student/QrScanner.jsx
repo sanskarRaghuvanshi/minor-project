@@ -359,10 +359,10 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
             </p>
           </div>
         </div>
-        <style jsx global>{`\''@keyframes scan-pulse {
+        <style>{`@keyframes scan-pulse {
             0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px var(--primary, #2563eb); }
             50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 40px var(--primary, #2563eb); }
-          }'`}</style>
+          }`}</style>
 
         {availableCameras.length > 1 && (
           <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
