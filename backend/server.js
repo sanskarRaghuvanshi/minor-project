@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 5000;
 
 app.set('trust proxy', 1);
 
-// SECURITY → PARSING → LOGGING → RATE LIMIT → ROUTES → ERROR HANDLER
+// SECURITY → PARSING → LOGGING → ROUTES (rate limit applied per-route below) → ERROR HANDLER
 securityMiddlewares.forEach((mw) => app.use(mw));
 app.use(sanitizeBody);
 
@@ -33,8 +33,13 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-app.use(generalLimiter);
-
+// Root and health-check routes are infrastructure plumbing, not user-facing API
+// surface — Render pings /api/v1/health repeatedly (every deploy, and
+// periodically afterward) to confirm the service is alive. Rate-limiting these
+// let Render's own health probes trip the limiter and get a 429, which Render
+// then reads as "unhealthy" and can fail the deploy or restart the service —
+// even though nothing was actually wrong. So: no limiter on these two routes,
+// generalLimiter applied per-route below for everything that's real API traffic.
 app.get('/', (_req, res) => {
   res.json({
     success: true,
@@ -43,16 +48,20 @@ app.get('/', (_req, res) => {
     message: 'Welcome to Smart Attendance API',
   });
 });
-
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/branches', branchRoutes);
-app.use('/api/v1/faculty', facultyRoutes);
-app.use('/api/v1/student', studentRoutes);
 app.use('/api/v1/health', healthRoutes);
-app.use('/api/v1/admin', adminRoutes);
-app.use('/api/v1/leave', leaveRoutes);
-app.use('/api/v1/coordinator', coordinatorRoutes);
-app.use('/api/v1/qr', qrRoutes);
+
+app.use('/api/v1/auth', generalLimiter, authRoutes);
+app.use('/api/v1/branches', generalLimiter, branchRoutes);
+app.use('/api/v1/faculty', generalLimiter, facultyRoutes);
+app.use('/api/v1/student', generalLimiter, studentRoutes);
+app.use('/api/v1/admin', generalLimiter, adminRoutes);
+app.use('/api/v1/leave', generalLimiter, leaveRoutes);
+app.use('/api/v1/coordinator', generalLimiter, coordinatorRoutes);
+app.use('/api/v1/qr', generalLimiter, qrRoutes);
+// /api/v1/system is already gated by the x-cron-secret header check in
+// systemController.js — that's a stronger, purpose-built guard than a generic
+// request-count limiter, and it's only ever called by your own cron job a
+// handful of times a day, so no additional rate limit needed here.
 app.use('/api/v1/system', systemRoutes);
 
 // 404 handler
