@@ -7,10 +7,13 @@ import EmptyState from '../common/EmptyState';
 import { usePagination } from '../../hooks/usePagination';
 import { formatDate } from '../../utils/formatDate';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
 const LeaveRequests = () => {
   const [tab, setTab] = useState('pending');
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const { page, limit, total, totalPages, updateMeta, setPage } = usePagination();
 
   const fetchLeaves = useCallback(async () => {
@@ -40,6 +43,10 @@ const LeaveRequests = () => {
     return 'badge--warning';
   };
 
+  const isPdf = (url) => url?.toLowerCase().endsWith('.pdf');
+  const isImage = (url) => /\.(jpe?g|png)$/i.test(url || '');
+  const getFullUrl = (url) => (url?.startsWith('http') ? url : `${API_BASE}${url}`);
+
   return (
     <div className="leave-requests">
       <div className="dashboard-home__header">
@@ -56,7 +63,7 @@ const LeaveRequests = () => {
           <div className="table-container">
             <table>
               <thead>
-                <tr><th>Student</th><th>Email</th><th>Start</th><th>End</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+                <tr><th>Student</th><th>Email</th><th>Start</th><th>End</th><th>Reason</th><th>Document</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {leaves.map((l) => (
@@ -66,6 +73,47 @@ const LeaveRequests = () => {
                     <td>{formatDate(l.startDate)}</td>
                     <td>{formatDate(l.endDate)}</td>
                     <td>{l.reason}</td>
+                    <td>
+                      {l.documentUrl ? (
+                        isImage(l.documentUrl) ? (
+                          <img
+                            src={getFullUrl(l.documentUrl)}
+                            alt="Supporting document"
+                            style={{
+                              width: '60px',
+                              height: '60px',
+                              objectFit: 'cover',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              border: '1px solid var(--border)',
+                            }}
+                            onClick={() => setPreviewUrl(getFullUrl(l.documentUrl))}
+                            title="Click to view full size"
+                          />
+                        ) : isPdf(l.documentUrl) ? (
+                          <a
+                            href={getFullUrl(l.documentUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn--ghost btn--sm"
+                            title="Open PDF document"
+                          >
+                            📄 View PDF
+                          </a>
+                        ) : (
+                          <a
+                            href={getFullUrl(l.documentUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn--ghost btn--sm"
+                          >
+                            📎 View File
+                          </a>
+                        )
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
                     <td><span className={`badge ${statusBadge(l.status)}`}>{l.status}</span></td>
                     <td>
                       {l.status === 'pending' ? (
@@ -83,8 +131,56 @@ const LeaveRequests = () => {
           <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
         </>
       )}
+
+      {/* Full-size Document Preview Modal */}
+      {previewUrl && (
+        <div
+          className="modal-overlay"
+          onClick={() => setPreviewUrl(null)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '90vw', maxHeight: '90vh', padding: '16px', position: 'relative' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0 }}>Document Preview</h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={previewUrl}
+                  download
+                  className="btn btn--primary btn--sm"
+                  title="Download document"
+                >
+                  ⬇ Download
+                </a>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => setPreviewUrl(null)}
+                  title="Close preview"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <img
+              src={previewUrl}
+              alt="Document full preview"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '75vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default LeaveRequests;
+
