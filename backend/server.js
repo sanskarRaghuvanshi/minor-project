@@ -14,6 +14,7 @@ import facultyRoutes from './routes/faculty.js';
 import studentRoutes from './routes/student.js';
 import adminRoutes from './routes/admin.js';
 import leaveRoutes from './routes/leave.js';
+import uploadDocumentRoutes from './routes/uploadDocument.js';
 import coordinatorRoutes from './routes/coordinator.js';
 import qrRoutes from './routes/qr.js';
 import systemRoutes from './routes/system.js';
@@ -56,6 +57,8 @@ app.use('/api/v1/faculty', generalLimiter, facultyRoutes);
 app.use('/api/v1/student', generalLimiter, studentRoutes);
 app.use('/api/v1/admin', generalLimiter, adminRoutes);
 app.use('/api/v1/leave', generalLimiter, leaveRoutes);
+app.use('/uploads', express.static('uploads'));
+app.use('/api/v1/leave', uploadDocumentRoutes);
 app.use('/api/v1/coordinator', generalLimiter, coordinatorRoutes);
 app.use('/api/v1/qr', generalLimiter, qrRoutes);
 // /api/v1/system is already gated by the x-cron-secret header check in

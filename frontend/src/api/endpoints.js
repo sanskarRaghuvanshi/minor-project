@@ -27,6 +27,7 @@ export const ENDPOINTS = {
     PENDING: `${BASE}/leave/pending`,
     ALL: `${BASE}/leave/all`,
     REVIEW: (id) => `${BASE}/leave/${id}/review`,
+    UPLOAD_DOCUMENT: `${BASE}/leave/upload-document`,
   },
   FACULTY: {
     STUDENTS: `${BASE}/faculty/students`,
