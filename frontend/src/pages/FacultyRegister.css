@@ -1,0 +1,383 @@
+/* FacultyRegister.css - Modern Material 3 Registration Page */
+
+.fac-reg-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  background-color: #fdfbff;
+  font-family: 'Inter', 'Public Sans', system-ui, -apple-system, sans-serif;
+  color: #1a1b1f;
+  box-sizing: border-box;
+}
+
+/* Left Illustration Panel */
+.fac-reg-left-panel {
+  display: none;
+  width: 50%;
+  background-color: #d8e2ff;
+  position: relative;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .fac-reg-left-panel {
+    display: flex;
+  }
+}
+
+/* Decorative background glow circles */
+.fac-reg-glow-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.fac-reg-glow-1 {
+  position: absolute;
+  top: -6rem;
+  left: -6rem;
+  width: 24rem;
+  height: 24rem;
+  background-color: #004ac6;
+  border-radius: 9999px;
+  filter: blur(48px);
+  opacity: 0.5;
+}
+
+.fac-reg-glow-2 {
+  position: absolute;
+  bottom: 3rem;
+  right: 3rem;
+  width: 18rem;
+  height: 18rem;
+  background-color: #565e71;
+  border-radius: 9999px;
+  filter: blur(48px);
+  opacity: 0.5;
+}
+
+.fac-reg-left-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: 480px;
+}
+
+.fac-reg-left-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #001a41;
+  margin-bottom: 1.25rem;
+  line-height: 1.2;
+}
+
+.fac-reg-left-desc {
+  font-size: 1.125rem;
+  color: #001a41;
+  opacity: 0.85;
+  margin-bottom: 2.5rem;
+  line-height: 1.5;
+}
+
+.fac-reg-img-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 16 / 9;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.15), 0px 1px 3px rgba(0, 0, 0, 0.2);
+  background-color: #ffffff;
+}
+
+.fac-reg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Right Form Panel */
+.fac-reg-right-panel {
+  width: 100%;
+  background-color: #fdfbff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1.25rem;
+  min-height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .fac-reg-right-panel {
+    width: 50%;
+    padding: 3rem;
+  }
+}
+
+.fac-reg-card {
+  width: 100%;
+  max-width: 460px;
+  background-color: #ffffff;
+  border-radius: 0.875rem;
+  box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.08), 0px 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #c4c6d0;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .fac-reg-card {
+    padding: 2.5rem;
+  }
+}
+
+/* Header & Logo */
+.fac-reg-header-wrap {
+  margin-bottom: 1.75rem;
+}
+
+.fac-reg-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #004ac6;
+  margin-bottom: 1.25rem;
+}
+
+.fac-reg-brand .material-symbols-outlined {
+  font-size: 2rem;
+}
+
+.fac-reg-brand-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.fac-reg-heading {
+  font-size: 1.85rem;
+  font-weight: 600;
+  color: #1a1b1f;
+  margin: 0 0 0.35rem 0;
+}
+
+.fac-reg-subheading {
+  font-size: 0.875rem;
+  color: #44474f;
+  margin: 0;
+}
+
+/* Form Styles */
+.fac-reg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.fac-reg-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fac-reg-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1a1b1f;
+}
+
+.fac-reg-input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fac-reg-input-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #74777f;
+  pointer-events: none;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.fac-reg-input {
+  width: 100%;
+  padding: 0.625rem 0.75rem 0.625rem 2.5rem;
+  border: 1px solid #c4c6d0;
+  border-radius: 0.5rem;
+  background-color: #fdfbff;
+  color: #1a1b1f;
+  font-size: 0.875rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.fac-reg-input:focus {
+  outline: none;
+  border-color: #004ac6;
+  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.2);
+}
+
+.fac-reg-eye-btn {
+  position: absolute;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  color: #74777f;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.fac-reg-eye-btn:hover {
+  color: #1a1b1f;
+}
+
+/* Divider */
+.fac-reg-divider {
+  border: none;
+  border-top: 1px solid #c4c6d0;
+  margin: 0.5rem 0;
+}
+
+/* Academic Section */
+.fac-reg-academic-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1a1b1f;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.fac-reg-select-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #44474f;
+  margin-bottom: 0.35rem;
+  display: block;
+}
+
+.fac-reg-select {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #c4c6d0;
+  border-radius: 0.5rem;
+  background-color: #fdfbff;
+  color: #1a1b1f;
+  font-size: 0.875rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.fac-reg-select:focus {
+  outline: none;
+  border-color: #004ac6;
+  box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.2);
+}
+
+.fac-reg-select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background-color: #f3edf7;
+}
+
+.fac-reg-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* Submit Button */
+.fac-reg-submit-btn {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 9999px;
+  background-color: #004ac6;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.fac-reg-submit-btn:hover:not(:disabled) {
+  background-color: #003aa0;
+}
+
+.fac-reg-submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.fac-reg-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Alert banner */
+.fac-reg-alert {
+  padding: 0.75rem 1rem;
+  background-color: #ffdad6;
+  color: #410002;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Footer Link */
+.fac-reg-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #44474f;
+}
+
+.fac-reg-footer-link {
+  color: #004ac6;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 0.25rem;
+}
+
+.fac-reg-footer-link:hover {
+  text-decoration: underline;
+}
+
+.fac-reg-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

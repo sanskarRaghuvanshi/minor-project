@@ -33,12 +33,12 @@ const DEFAULT_BRANCHES = [
   },
 ];
 
-const FacultyRegister = () => {
+const CoordinatorRegister = () => {
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
-    role: 'faculty',
+    role: 'coordinator',
     branch: '',
     className: '',
     section: 'A',
@@ -48,6 +48,7 @@ const FacultyRegister = () => {
 
   const [branches, setBranches] = useState(DEFAULT_BRANCHES);
   const [availableClasses, setAvailableClasses] = useState([]);
+  const [availableSections, setAvailableSections] = useState(['A']);
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -78,15 +79,16 @@ const FacultyRegister = () => {
     const branchName = e.target.value;
     const selectedBranchObj = branches.find((b) => b.name === branchName);
     const branchClasses = selectedBranchObj?.classes || [];
-    const defaultSection = selectedBranchObj?.sections?.[0] || 'A';
+    const branchSections = selectedBranchObj?.sections || ['A'];
 
     setAvailableClasses(branchClasses);
+    setAvailableSections(branchSections);
     setAvailableSubjects([]);
     setForm((prev) => ({
       ...prev,
       branch: branchName,
       className: '',
-      section: defaultSection,
+      section: branchSections[0] || 'A',
       subject: '',
       subjects: [],
     }));
@@ -129,7 +131,7 @@ const FacultyRegister = () => {
       return;
     }
     if (!form.className) {
-      setError('Please select your class');
+      setError('Please select your class / year');
       return;
     }
 
@@ -140,7 +142,7 @@ const FacultyRegister = () => {
         name: form.name,
         email: form.email,
         password: form.password,
-        role: 'faculty',
+        role: 'coordinator',
         branch: form.branch,
         className: form.className,
         section: form.section || 'A',
@@ -148,7 +150,7 @@ const FacultyRegister = () => {
       };
 
       await register(payload);
-      navigate('/faculty/dashboard', { replace: true });
+      navigate('/coordinator/dashboard', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Registration failed';
       const details = err.response?.data?.errors?.map((errItem) => errItem.msg).join('; ');
@@ -161,23 +163,25 @@ const FacultyRegister = () => {
   return (
     <div className="fac-reg-container">
       {/* Left Side: Illustration / Branding */}
-      <div className="fac-reg-left-panel">
+      <div className="fac-reg-left-panel" style={{ backgroundColor: '#e2d8f9' }}>
         <div className="fac-reg-glow-wrap">
-          <div className="fac-reg-glow-1" />
-          <div className="fac-reg-glow-2" />
+          <div className="fac-reg-glow-1" style={{ backgroundColor: '#6750a4' }} />
+          <div className="fac-reg-glow-2" style={{ backgroundColor: '#004ac6' }} />
         </div>
 
         <div className="fac-reg-left-content">
-          <h1 className="fac-reg-left-title">Join the Future of Education</h1>
-          <p className="fac-reg-left-desc">
-            Automate attendance, streamline schedules, and focus on what matters most: teaching.
+          <h1 className="fac-reg-left-title" style={{ color: '#21005d' }}>
+            Lead Academic Coordination
+          </h1>
+          <p className="fac-reg-left-desc" style={{ color: '#21005d' }}>
+            Manage faculty schedules, approve student leave requests, monitor department feedback, and enforce attendance policies effortlessly.
           </p>
         </div>
 
         <div className="fac-reg-img-card">
           <img
             src="https://lh3.googleusercontent.com/aida/AEtjO1Wdh4eT5wc9zLU85FfeZdJSTkzgJQeYjrDxsqnq2wi7ImRAVyYwOLfFb1wp_zJMDXgqy6w4x6d1RBeh0ceh6JZBky7c-9K_Jt4f_h7hbzjEEgWdfPTMhmkd4DxepziFZ9GUS5munYlKCcnGxkn2_lWQowcYNd8SRG7Np-BboRCHdzRgoYsVBlHU_IwCOlQxay-sJ59p7wMaaCMjEAlu2ttD6ODTLxulcnKL6hl4pWK0XsQxeFbU1pXo1hU"
-            alt="3D illustration of educational tools and modern tech"
+            alt="Academic Coordination Illustration"
             className="fac-reg-img"
           />
         </div>
@@ -190,12 +194,12 @@ const FacultyRegister = () => {
           <div className="fac-reg-header-wrap">
             <div className="fac-reg-brand">
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                school
+                manage_accounts
               </span>
               <span className="fac-reg-brand-name">SmartAttend</span>
             </div>
-            <h2 className="fac-reg-heading">Faculty Registration</h2>
-            <p className="fac-reg-subheading">Create your institutional account.</p>
+            <h2 className="fac-reg-heading">Coordinator Registration</h2>
+            <p className="fac-reg-subheading">Create your department coordinator account.</p>
           </div>
 
           {/* Error Banner */}
@@ -223,7 +227,7 @@ const FacultyRegister = () => {
                   type="text"
                   value={form.name}
                   onChange={handleChange}
-                  placeholder="Dr. Jane Smith"
+                  placeholder="Prof. Michael Scott"
                   required
                   className="fac-reg-input"
                 />
@@ -242,7 +246,7 @@ const FacultyRegister = () => {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="jane.smith@university.edu"
+                  placeholder="m.scott@university.edu"
                   required
                   className="fac-reg-input"
                 />
@@ -283,7 +287,7 @@ const FacultyRegister = () => {
 
             {/* Academic Assignment */}
             <div>
-              <div className="fac-reg-academic-title">Initial Academic Assignment</div>
+              <div className="fac-reg-academic-title">Coordinated Department &amp; Class</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div>
                   <label className="fac-reg-select-label" htmlFor="branch">
@@ -311,7 +315,7 @@ const FacultyRegister = () => {
                 <div className="fac-reg-grid-2">
                   <div>
                     <label className="fac-reg-select-label" htmlFor="class">
-                      Class
+                      Coordinated Class
                     </label>
                     <select
                       id="class"
@@ -337,18 +341,40 @@ const FacultyRegister = () => {
                   </div>
 
                   <div>
+                    <label className="fac-reg-select-label" htmlFor="section">
+                      Section
+                    </label>
+                    <select
+                      id="section"
+                      name="section"
+                      value={form.section}
+                      onChange={handleChange}
+                      disabled={!form.branch || availableSections.length === 0}
+                      className="fac-reg-select"
+                      required
+                    >
+                      {availableSections.map((sec) => (
+                        <option key={sec} value={sec}>
+                          Section {sec}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {availableSubjects.length > 0 && (
+                  <div>
                     <label className="fac-reg-select-label" htmlFor="subject">
-                      Subject
+                      Primary Subject (Optional)
                     </label>
                     <select
                       id="subject"
                       name="subject"
                       value={form.subject}
                       onChange={handleSubjectSelect}
-                      disabled={!form.className || availableSubjects.length === 0}
                       className="fac-reg-select"
                     >
-                      <option value="">Select Subject</option>
+                      <option value="">All Department Subjects</option>
                       {availableSubjects.map((s) => (
                         <option key={s} value={s}>
                           {s}
@@ -356,7 +382,7 @@ const FacultyRegister = () => {
                       ))}
                     </select>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -364,7 +390,7 @@ const FacultyRegister = () => {
             <div style={{ paddingTop: '0.5rem' }}>
               <button type="submit" className="fac-reg-submit-btn" disabled={loading}>
                 {loading && <div className="fac-reg-spinner" />}
-                <span>{loading ? 'Registering...' : 'Register Account'}</span>
+                <span>{loading ? 'Registering...' : 'Register Coordinator Account'}</span>
               </button>
             </div>
           </form>
@@ -383,8 +409,8 @@ const FacultyRegister = () => {
                 Student
               </Link>{' '}
               |{' '}
-              <Link to="/register/coordinator" className="fac-reg-footer-link">
-                Coordinator
+              <Link to="/register/faculty" className="fac-reg-footer-link">
+                Faculty
               </Link>
             </p>
           </div>
@@ -394,4 +420,4 @@ const FacultyRegister = () => {
   );
 };
 
-export default FacultyRegister;
+export default CoordinatorRegister;
