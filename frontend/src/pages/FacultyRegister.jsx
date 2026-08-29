@@ -1,157 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import axiosInstance from '../api/axiosInstance';
-import { ENDPOINTS } from '../api/endpoints';
-import './FacultyRegister.css';
-
-const DEFAULT_BRANCHES = [
-  {
-    name: 'Computer Science',
-    sections: ['A', 'B'],
-    classes: [
-      { name: 'First Year - Section A', subjects: ['Introduction to Algorithms', 'Calculus I', 'Programming in C'] },
-      { name: 'Second Year - Section B', subjects: ['Data Structures', 'Database Systems', 'Operating Systems'] },
-      { name: 'Masters - Core', subjects: ['Advanced Database Systems', 'Machine Learning', 'Cloud Computing'] },
-    ],
-  },
-  {
-    name: 'Engineering',
-    sections: ['A', 'B'],
-    classes: [
-      { name: 'First Year - Core', subjects: ['Engineering Physics', 'Calculus', 'Engineering Mechanics'] },
-      { name: 'Second Year - Core', subjects: ['Thermodynamics', 'Fluid Mechanics', 'Materials Science'] },
-    ],
-  },
-  {
-    name: 'Business Administration',
-    sections: ['A'],
-    classes: [
-      { name: 'Undergraduate - Year 1', subjects: ['Principles of Management', 'Microeconomics', 'Business Communication'] },
-      { name: 'MBA - Year 1', subjects: ['Corporate Finance', 'Strategic Management', 'Marketing Management'] },
-    ],
-  },
-];
+import CascadingSelect from '../components/auth/CascadingSelect';
 
 const FacultyRegister = () => {
   const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'faculty',
-    branch: '',
-    className: '',
-    section: 'A',
-    subject: '',
-    subjects: [],
+    name: '', email: '', password: '', role: 'faculty',
+    branch: '', className: '', section: '', subjects: [],
   });
-
-  const [branches, setBranches] = useState(DEFAULT_BRANCHES);
-  const [availableClasses, setAvailableClasses] = useState([]);
-  const [availableSubjects, setAvailableSubjects] = useState([]);
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    axiosInstance
-      .get(ENDPOINTS.BRANCHES.LIST)
-      .then(({ data }) => {
-        if (data.data && Array.isArray(data.data) && data.data.length > 0) {
-          setBranches(data.data);
-        }
-      })
-      .catch(() => {
-        // Fallback to DEFAULT_BRANCHES
-      });
-  }, []);
-
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setError('');
   };
 
-  const handleBranchSelect = (e) => {
-    const branchName = e.target.value;
-    const selectedBranchObj = branches.find((b) => b.name === branchName);
-    const branchClasses = selectedBranchObj?.classes || [];
-    const defaultSection = selectedBranchObj?.sections?.[0] || 'A';
-
-    setAvailableClasses(branchClasses);
-    setAvailableSubjects([]);
-    setForm((prev) => ({
-      ...prev,
-      branch: branchName,
-      className: '',
-      section: defaultSection,
-      subject: '',
-      subjects: [],
-    }));
-    setError('');
-  };
-
-  const handleClassSelect = (e) => {
-    const clsName = e.target.value;
-    const selectedClsObj = availableClasses.find((c) => (typeof c === 'string' ? c === clsName : c.name === clsName));
-    const subjs = selectedClsObj?.subjects || [];
-
-    setAvailableSubjects(subjs);
-    setForm((prev) => ({
-      ...prev,
-      className: clsName,
-      subject: '',
-      subjects: [],
-    }));
-    setError('');
-  };
-
-  const handleSubjectSelect = (e) => {
-    const subjName = e.target.value;
-    setForm((prev) => ({
-      ...prev,
-      subject: subjName,
-      subjects: subjName ? [subjName] : [],
-    }));
+  const handleRoleChange = (role) => {
+    setForm((prev) => ({ ...prev, role, subjects: [] }));
     setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password) {
-      setError('Please fill in your name, email, and password');
+    if (!form.name || !form.email || !form.password || !form.branch || !form.className || !form.section) {
+      setError('All required fields must be filled');
       return;
     }
-    if (!form.branch) {
-      setError('Please select your branch / department');
-      return;
-    }
-    if (!form.className) {
-      setError('Please select your class');
-      return;
-    }
-
     setLoading(true);
     setError('');
     try {
-      const payload = {
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        role: 'faculty',
-        branch: form.branch,
-        className: form.className,
-        section: form.section || 'A',
-        subjects: form.subjects.length > 0 ? form.subjects : (form.subject ? [form.subject] : []),
-      };
-
-      await register(payload);
-      navigate('/faculty/dashboard', { replace: true });
+      await register(form);
+      const dest = form.role === 'coordinator' ? '/coordinator/dashboard' : '/faculty/dashboard';
+      navigate(dest, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Registration failed';
-      const details = err.response?.data?.errors?.map((errItem) => errItem.msg).join('; ');
+      const details = err.response?.data?.errors?.map((e) => e.msg).join('; ');
       setError(details ? `${msg}: ${details}` : msg);
     } finally {
       setLoading(false);
@@ -159,235 +45,72 @@ const FacultyRegister = () => {
   };
 
   return (
-    <div className="fac-reg-container">
-      {/* Left Side: Illustration / Branding */}
-      <div className="fac-reg-left-panel">
-        <div className="fac-reg-glow-wrap">
-          <div className="fac-reg-glow-1" />
-          <div className="fac-reg-glow-2" />
+    <div className="auth-page">
+      <div className="auth-card card">
+        <div className="auth-card__header">
+          <h1>Faculty Registration</h1>
+          <p>Create your faculty account</p>
         </div>
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
+          {error && <div className="alert alert--error" role="alert">{error}</div>}
 
-        <div className="fac-reg-left-content">
-          <h1 className="fac-reg-left-title">Join the Future of Education</h1>
-          <p className="fac-reg-left-desc">
-            Automate attendance, streamline schedules, and focus on what matters most: teaching.
-          </p>
-        </div>
-
-        <div className="fac-reg-img-card">
-          <img
-            src="https://lh3.googleusercontent.com/aida/AEtjO1Wdh4eT5wc9zLU85FfeZdJSTkzgJQeYjrDxsqnq2wi7ImRAVyYwOLfFb1wp_zJMDXgqy6w4x6d1RBeh0ceh6JZBky7c-9K_Jt4f_h7hbzjEEgWdfPTMhmkd4DxepziFZ9GUS5munYlKCcnGxkn2_lWQowcYNd8SRG7Np-BboRCHdzRgoYsVBlHU_IwCOlQxay-sJ59p7wMaaCMjEAlu2ttD6ODTLxulcnKL6hl4pWK0XsQxeFbU1pXo1hU"
-            alt="3D illustration of educational tools and modern tech"
-            className="fac-reg-img"
-          />
-        </div>
-      </div>
-
-      {/* Right Side: Registration Form */}
-      <div className="fac-reg-right-panel">
-        <div className="fac-reg-card">
-          {/* Logo & Header */}
-          <div className="fac-reg-header-wrap">
-            <div className="fac-reg-brand">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                school
-              </span>
-              <span className="fac-reg-brand-name">SmartAttend</span>
-            </div>
-            <h2 className="fac-reg-heading">Faculty Registration</h2>
-            <p className="fac-reg-subheading">Create your institutional account.</p>
-          </div>
-
-          {/* Error Banner */}
-          {error && (
-            <div className="fac-reg-alert" role="alert" style={{ marginBottom: '1.25rem' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                error
-              </span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="fac-reg-form" noValidate>
-            {/* Personal Info */}
-            <div className="fac-reg-input-group">
-              <label className="fac-reg-label" htmlFor="fullName">
-                Full Name
-              </label>
-              <div className="fac-reg-input-box">
-                <span className="material-symbols-outlined fac-reg-input-icon">person</span>
-                <input
-                  id="fullName"
-                  name="name"
-                  type="text"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="Dr. Jane Smith"
-                  required
-                  className="fac-reg-input"
-                />
-              </div>
-            </div>
-
-            <div className="fac-reg-input-group">
-              <label className="fac-reg-label" htmlFor="email">
-                Institutional Email
-              </label>
-              <div className="fac-reg-input-box">
-                <span className="material-symbols-outlined fac-reg-input-icon">mail</span>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="jane.smith@university.edu"
-                  required
-                  className="fac-reg-input"
-                />
-              </div>
-            </div>
-
-            <div className="fac-reg-input-group">
-              <label className="fac-reg-label" htmlFor="password">
-                Password
-              </label>
-              <div className="fac-reg-input-box">
-                <span className="material-symbols-outlined fac-reg-input-icon">lock</span>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                  className="fac-reg-input"
-                />
-                <button
-                  type="button"
-                  className="fac-reg-eye-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-                    {showPassword ? 'visibility' : 'visibility_off'}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <hr className="fac-reg-divider" />
-
-            {/* Academic Assignment */}
-            <div>
-              <div className="fac-reg-academic-title">Initial Academic Assignment</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <div>
-                  <label className="fac-reg-select-label" htmlFor="branch">
-                    Branch / Department
-                  </label>
-                  <select
-                    id="branch"
-                    name="branch"
-                    value={form.branch}
-                    onChange={handleBranchSelect}
-                    className="fac-reg-select"
-                    required
-                  >
-                    <option value="" disabled>
-                      Select Branch
-                    </option>
-                    {branches.map((b) => (
-                      <option key={b.name || b._id} value={b.name}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="fac-reg-grid-2">
-                  <div>
-                    <label className="fac-reg-select-label" htmlFor="class">
-                      Class
-                    </label>
-                    <select
-                      id="class"
-                      name="className"
-                      value={form.className}
-                      onChange={handleClassSelect}
-                      disabled={!form.branch || availableClasses.length === 0}
-                      className="fac-reg-select"
-                      required
-                    >
-                      <option value="" disabled>
-                        Select Class
-                      </option>
-                      {availableClasses.map((c) => {
-                        const name = typeof c === 'string' ? c : c.name;
-                        return (
-                          <option key={name} value={name}>
-                            {name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="fac-reg-select-label" htmlFor="subject">
-                      Subject
-                    </label>
-                    <select
-                      id="subject"
-                      name="subject"
-                      value={form.subject}
-                      onChange={handleSubjectSelect}
-                      disabled={!form.className || availableSubjects.length === 0}
-                      className="fac-reg-select"
-                    >
-                      <option value="">Select Subject</option>
-                      {availableSubjects.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <div style={{ paddingTop: '0.5rem' }}>
-              <button type="submit" className="fac-reg-submit-btn" disabled={loading}>
-                {loading && <div className="fac-reg-spinner" />}
-                <span>{loading ? 'Registering...' : 'Register Account'}</span>
+          <div className="form-group">
+            <label>Account Type</label>
+            <div className="role-toggle" role="group" aria-label="Account type">
+              <button
+                type="button"
+                className={`role-toggle__btn ${form.role === 'faculty' ? 'role-toggle__btn--active' : ''}`}
+                onClick={() => handleRoleChange('faculty')}
+                aria-pressed={form.role === 'faculty'}
+              >
+                Faculty
+              </button>
+              <button
+                type="button"
+                className={`role-toggle__btn ${form.role === 'coordinator' ? 'role-toggle__btn--active' : ''}`}
+                onClick={() => handleRoleChange('coordinator')}
+                aria-pressed={form.role === 'coordinator'}
+              >
+                Class Coordinator
               </button>
             </div>
-          </form>
-
-          {/* Footer Link */}
-          <div className="fac-reg-footer">
-            <p>
-              Already have an account?
-              <Link to="/login" className="fac-reg-footer-link">
-                Log in
-              </Link>
-            </p>
-            <p style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
-              Other roles:{' '}
-              <Link to="/register/student" className="fac-reg-footer-link">
-                Student
-              </Link>{' '}
-              |{' '}
-              <Link to="/register/coordinator" className="fac-reg-footer-link">
-                Coordinator
-              </Link>
+            <p className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '6px' }}>
+              {form.role === 'coordinator'
+                ? 'Coordinators review leave requests, see class teachers and students, and receive class feedback.'
+                : 'Faculty mark attendance, track defaulters and submit class feedback.'}
             </p>
           </div>
+
+          <div className="form-group">
+            <label htmlFor="name">Full Name</label>
+            <input id="name" name="name" value={form.name} onChange={handleChange} placeholder="Dr. John Doe" required />
+          </div>
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="faculty@institute.edu" required />
+          </div>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input id="password" name="password" type="password" value={form.password} onChange={handleChange} placeholder="Min 6 chars, at least one letter &amp; one number" required minLength={6} />
+          </div>
+          <CascadingSelect
+            role={form.role}
+            selectedBranch={form.branch}
+            selectedClass={form.className}
+            selectedSection={form.section}
+            selectedSubjects={form.subjects}
+            onBranchChange={(v) => setForm((prev) => ({ ...prev, branch: v }))}
+            onClassChange={(v) => setForm((prev) => ({ ...prev, className: v }))}
+            onSectionChange={(v) => setForm((prev) => ({ ...prev, section: v }))}
+            onSubjectsChange={(v) => setForm((prev) => ({ ...prev, subjects: v }))}
+          />
+          <button type="submit" className="btn btn--primary btn--full" disabled={loading}>
+            {loading ? 'Registering...' : form.role === 'coordinator' ? 'Register as Coordinator' : 'Register as Faculty'}
+          </button>
+        </form>
+        <div className="auth-card__footer">
+          <p>Already have an account? <Link to="/login">Sign In</Link></p>
+          <p><Link to="/register/student">Register as Student</Link></p>
         </div>
       </div>
     </div>

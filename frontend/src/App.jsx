@@ -12,7 +12,6 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
 const FacultyRegister = lazy(() => import('./pages/FacultyRegister'));
 const StudentRegister = lazy(() => import('./pages/StudentRegister'));
-const CoordinatorRegister = lazy(() => import('./pages/CoordinatorRegister'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const FacultyDashboardPage = lazy(() => import('./pages/FacultyDashboardPage'));
@@ -54,7 +53,6 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/register/faculty" element={<FacultyRegister />} />
                 <Route path="/register/student" element={<StudentRegister />} />
-                <Route path="/register/coordinator" element={<CoordinatorRegister />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password/:token" element={<ResetPassword />} />
 
