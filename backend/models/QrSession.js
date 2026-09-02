@@ -25,6 +25,10 @@ const qrSessionSchema = new Schema(
       type: Date,
       required: [true, 'Date is required'],
     },
+    expiresAt: {
+      type: Date,
+      required: [true, 'Expiry is required'],
+    },
     branch: {
       type: String,
       required: [true, 'Branch is required'],

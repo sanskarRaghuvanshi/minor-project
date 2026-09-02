@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useAuth } from '../../context/AuthContext';
@@ -7,30 +7,38 @@ import Skeleton from '../common/Skeleton';
 import EmptyState from '../common/EmptyState';
 import SearchInput from '../common/SearchInput';
 import { usePagination } from '../../hooks/usePagination';
+import { useDebounce } from '../../hooks/useDebounce';
 
 const CoordinatorStudents = () => {
   const { user } = useAuth();
   const [students, setStudents] = useState([]);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { page, limit, total, totalPages, updateMeta, setPage, changeLimit } = usePagination();
+  const requestIdRef = useRef(0);
 
   const fetchStudents = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError('');
     try {
       const { data: res } = await axiosInstance.get(ENDPOINTS.COORDINATOR.STUDENTS, {
-        params: { page, limit, search: search || undefined },
+        params: { page, limit, search: debouncedSearch || undefined },
       });
+      // A faster-typing user can have an older request resolve after a newer
+      // one — only apply the response if nothing newer has since been fired.
+      if (requestId !== requestIdRef.current) return;
       setStudents(res.data || []);
       updateMeta(res.meta);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(err.response?.data?.message || 'Failed to load students');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, limit, search, updateMeta]);
+  }, [page, limit, debouncedSearch, updateMeta]);
 
   useEffect(() => { fetchStudents(); }, [fetchStudents]);
 

@@ -14,6 +14,10 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   const [permissionState, setPermissionState] = useState('prompt');
   const isMountedRef = useRef(true);
   const html5QrcodeRef = useRef(null);
+  // Mirrors selectedCameraId so startScanner (invoked from a setTimeout after
+  // switchCamera) always reads the just-selected camera instead of whichever
+  // stale closure the timeout captured.
+  const selectedCameraIdRef = useRef(null);
 
   const stopScanner = useCallback(async () => {
     if (html5QrcodeRef.current) {
@@ -88,6 +92,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         if (videoDevices.length > 0 && !selectedCameraId) {
           const backCamera = videoDevices.find((d) => /back|environment|rear/i.test(d.label));
           const preferred = backCamera || videoDevices[0];
+          selectedCameraIdRef.current = preferred.deviceId;
           setSelectedCameraId(preferred.deviceId);
         }
       }
@@ -166,13 +171,19 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   }, [enumerateCameras, addToast]);
 
   const startScanner = useCallback(async () => {
-    if (html5QrcodeRef.current) return;
+    if (html5QrcodeRef.current || !isMountedRef.current) return;
 
     const hasPermission = await requestCameraPermission();
-    if (!hasPermission) return;
+    // requestCameraPermission awaits getUserMedia — under StrictMode's
+    // mount→cleanup→mount, the component can unmount (or a second startScanner
+    // call can already be under way) while this is pending. Re-check both
+    // guards before touching the DOM/camera so we never end up with two
+    // Html5Qrcode instances fighting over the same #qr-reader node.
+    if (!hasPermission || !isMountedRef.current || html5QrcodeRef.current) return;
 
+    let html5Qrcode;
     try {
-      const html5Qrcode = new Html5Qrcode('qr-reader');
+      html5Qrcode = new Html5Qrcode('qr-reader');
       html5QrcodeRef.current = html5Qrcode;
 
       const config = {
@@ -182,8 +193,8 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
       };
 
       const cameraConfigs = [];
-      if (selectedCameraId) {
-        cameraConfigs.push(selectedCameraId);
+      if (selectedCameraIdRef.current) {
+        cameraConfigs.push(selectedCameraIdRef.current);
       }
       cameraConfigs.push({ facingMode: 'environment' });
       cameraConfigs.push({ facingMode: 'user' });
@@ -209,12 +220,18 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         throw lastError || new Error('No working camera config found');
       }
 
-      if (isMountedRef.current) {
-        setScanning(true);
-        setError('');
+      if (!isMountedRef.current) {
+        // Unmounted while the camera was starting — tear it straight back down.
+        await html5Qrcode.stop().catch(() => {});
+        html5QrcodeRef.current = null;
+        return;
       }
+
+      setScanning(true);
+      setError('');
     } catch (err) {
       console.error('Failed to start scanner:', err);
+      html5QrcodeRef.current = null;
       if (isMountedRef.current) {
         const msg = err.name === 'OverconstrainedError'
           ? 'No suitable camera found. Try switching cameras.'
@@ -223,10 +240,11 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         addToast(msg, 'error');
       }
     }
-  }, [requestCameraPermission, selectedCameraId, handleScanSuccess, handleScanError, addToast]);
+  }, [requestCameraPermission, handleScanSuccess, handleScanError, addToast]);
 
   const switchCamera = useCallback(async (deviceId) => {
     if (!deviceId || deviceId === selectedCameraId) return;
+    selectedCameraIdRef.current = deviceId;
     setSelectedCameraId(deviceId);
     await stopScanner();
     setTimeout(startScanner, 300);

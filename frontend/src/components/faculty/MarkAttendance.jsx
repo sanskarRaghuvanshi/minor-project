@@ -94,12 +94,16 @@ const MarkAttendance = () => {
         .filter(([, status]) => status)
         .map(([studentId, status]) => ({ studentId, status }));
 
+      // A fresh key per submit — keying on date+subject alone would make a
+      // genuine correction (e.g. re-submitting after changing a student from
+      // absent to excused) collide with the original submission's key and
+      // silently return the cached first response instead of applying it.
       await axiosInstance.post(ENDPOINTS.FACULTY.ATTENDANCE, {
         date,
         subject,
         records,
       }, {
-        headers: { 'Idempotency-Key': `attendance-${date}-${subject}` },
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
       });
 
       addToast('Attendance marked successfully', 'success');

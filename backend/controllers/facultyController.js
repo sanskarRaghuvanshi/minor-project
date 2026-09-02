@@ -13,6 +13,7 @@ import { sendDefaulterEmail, generateDefaulterEmail } from '../services/emailSer
 import { logAudit } from '../services/auditService.js';
 import ApiError from '../utils/ApiError.js';
 import catchAsync from '../utils/catchAsync.js';
+import logger from '../config/logger.js';
 
 export const getStudentsValidations = [
   query('branch').optional().trim(),
@@ -152,6 +153,7 @@ export const getAttendance = catchAsync(async (req, res) => {
 
 export const getDefaultersValidations = [
   query('subject').optional().trim(),
+  query('search').optional().trim(),
   query('threshold').optional().isFloat({ min: 0, max: 100 }).toFloat(),
   query('page').optional().isInt({ min: 1 }).toInt(),
   query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
@@ -161,10 +163,12 @@ export const getDefaulters = catchAsync(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 20;
   const subject = req.query.subject || null;
+  const search = req.query.search || null;
   const threshold = parseFloat(req.query.threshold) || 75;
 
   const { records, meta } = await getDefaulterList({
     subject,
+    search,
     threshold,
     className: req.user.className,
     branch: req.user.branch,

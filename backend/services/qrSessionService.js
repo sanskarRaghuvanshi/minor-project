@@ -6,6 +6,8 @@ import { logAudit } from './auditService.js';
 import logger from '../config/logger.js';
 import ApiError from '../utils/ApiError.js';
 
+const QR_SESSION_TTL_MINUTES = Number(process.env.QR_SESSION_TTL_MINUTES) || 10;
+
 export const createQrSession = async ({
   facultyId,
   subject,
@@ -15,12 +17,14 @@ export const createQrSession = async ({
   section,
 }) => {
   const sessionToken = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + QR_SESSION_TTL_MINUTES * 60 * 1000);
 
   const session = await QrSession.create({
     sessionToken,
     faculty: facultyId,
     subject,
     date: new Date(date),
+    expiresAt,
     branch,
     className,
     section: section || '',
@@ -49,6 +53,12 @@ export const scanAndMarkAttendance = async (sessionToken, studentId, ipAddress, 
   const session = await QrSession.findOne({ sessionToken, isActive: true });
   if (!session) {
     throw new ApiError('Invalid or expired QR code', 400, 'INVALID_QR');
+  }
+
+  if (session.expiresAt.getTime() < Date.now()) {
+    session.isActive = false;
+    await session.save();
+    throw new ApiError('QR code has expired', 400, 'QR_EXPIRED');
   }
 
   const student = await User.findById(studentId);

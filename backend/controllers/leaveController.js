@@ -148,6 +148,18 @@ export const reviewLeave = catchAsync(async (req, res) => {
   if (!leave) throw new ApiError('Leave request not found', 404, 'NOT_FOUND');
   if (leave.status !== 'pending') throw new ApiError('Leave request already reviewed', 400, 'BAD_REQUEST');
 
+  if (req.user.role === 'coordinator') {
+    const student = await User.findById(leave.student).select('branch className section').lean();
+    if (
+      !student
+      || student.branch !== req.user.branch
+      || student.className !== req.user.className
+      || student.section !== req.user.section
+    ) {
+      throw new ApiError('You are not authorized to review this leave request', 403, 'FORBIDDEN');
+    }
+  }
+
   leave.status = status;
   leave.reviewedBy = req.user._id;
   leave.reviewedAt = new Date();

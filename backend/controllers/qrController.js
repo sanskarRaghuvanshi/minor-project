@@ -67,6 +67,7 @@ export const generateQr = catchAsync(async (req, res) => {
         sessionToken: session.sessionToken,
         subject: session.subject,
         date: session.date,
+        expiresAt: session.expiresAt,
         branch: session.branch,
         className: session.className,
         section: session.section,

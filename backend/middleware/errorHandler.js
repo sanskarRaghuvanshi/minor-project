@@ -19,7 +19,7 @@ const handleJsonWebTokenError = () => new ApiError('Invalid token. Please log in
 const handleTokenExpiredError = () => new ApiError('Your token has expired. Please log in again.', 401, 'UNAUTHORIZED');
 
 const errorHandler = (err, _req, res, _next) => {
-  let error = Object.assign(err);
+  let error = err;
   error.message = err.message;
 
   if (error.name === 'CastError') error = handleCastError(error);

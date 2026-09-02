@@ -54,12 +54,16 @@ const QrSessionView = () => {
 
     setUpdating((prev) => ({ ...prev, [key]: true }));
     try {
+      // A fresh key per call — keying on session+student alone would make a
+      // later correction (e.g. absent -> excused) collide with an earlier
+      // modification's key and silently return its cached response instead
+      // of applying the new status.
       await axiosInstance.post(ENDPOINTS.FACULTY.ATTENDANCE, {
         date: session.date.split('T')[0],
         subject: session.subject,
         records: [{ studentId, status: newStatus }],
       }, {
-        headers: { 'Idempotency-Key': `attendance-modify-${session.sessionToken}-${studentId}` },
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
       });
       addToast(`Attendance updated to ${newStatus}`, 'success');
       fetchSession();

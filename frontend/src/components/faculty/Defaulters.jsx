@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,7 @@ import Skeleton from '../common/Skeleton';
 import EmptyState from '../common/EmptyState';
 import Modal from '../common/Modal';
 import { usePagination } from '../../hooks/usePagination';
+import { useDebounce } from '../../hooks/useDebounce';
 
 const Defaulters = () => {
   const { user } = useAuth();
@@ -18,28 +19,33 @@ const Defaulters = () => {
   const [error, setError] = useState('');
   const [subject, setSubject] = useState('');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [selected, setSelected] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [sending, setSending] = useState(false);
   const { page, limit, total, totalPages, updateMeta, setPage, changeLimit } = usePagination(1, 20);
+  const requestIdRef = useRef(0);
 
   const fetchDefaulters = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError('');
     try {
       const { data: res } = await axiosInstance.get(ENDPOINTS.FACULTY.DEFAULTERS, {
         params: {
-          page, limit, subject: subject || undefined, threshold: 75,
+          page, limit, subject: subject || undefined, search: debouncedSearch || undefined, threshold: 75,
         },
       });
+      if (requestId !== requestIdRef.current) return;
       setData(res.data || []);
       updateMeta(res.meta);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(err.response?.data?.message || 'Failed to load defaulters');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, limit, subject, updateMeta]);
+  }, [page, limit, subject, debouncedSearch, updateMeta]);
 
   useEffect(() => { fetchDefaulters(); }, [fetchDefaulters]);
 
@@ -90,8 +96,9 @@ const Defaulters = () => {
           </div>
           <SearchInput
             value={search}
-            onChange={(v) => setSearch(v)}
+            onChange={(v) => { setSearch(v); setPage(1); }}
             placeholder="Search name/email..."
+            loading={loading}
             style={{ flex: 1 }}
           />
           <button

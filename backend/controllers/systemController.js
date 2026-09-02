@@ -1,5 +1,13 @@
+import crypto from 'crypto';
 import { runReminderJob } from '../services/schedulerService.js';
 import logger from '../config/logger.js';
+
+const isValidSecret = (provided, expected) => {
+  const providedBuf = Buffer.from(String(provided));
+  const expectedBuf = Buffer.from(String(expected));
+  if (providedBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(providedBuf, expectedBuf);
+};
 
 // Triggered over HTTP by an external cron service (e.g. cron-job.org), not by a
 // logged-in user — so it's guarded by a shared secret header, not JWT auth.
@@ -19,7 +27,7 @@ export const triggerReminders = async (req, res) => {
     });
   }
 
-  if (!provided || provided !== expected) {
+  if (!provided || !isValidSecret(provided, expected)) {
     return res.status(401).json({ success: false, data: null, message: 'Unauthorized' });
   }
 

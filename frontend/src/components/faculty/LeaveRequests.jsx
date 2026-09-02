@@ -47,6 +47,28 @@ const LeaveRequests = () => {
   const isImage = (url) => /\.(jpe?g|png)$/i.test(url || '');
   const getFullUrl = (url) => (url?.startsWith('http') ? url : `${API_BASE}${url}`);
 
+  // Browsers ignore the `download` attribute on a cross-origin <a> (the
+  // backend and frontend are on different origins per DEPLOYMENT.md), so a
+  // plain link just opens the file instead of saving it. Fetching it as a
+  // blob and downloading via a same-origin blob: URL works regardless.
+  const downloadDocument = async (url) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = url.split('/').pop() || 'document';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Failed to download document', err);
+    }
+  };
+
   return (
     <div className="leave-requests">
       <div className="dashboard-home__header">
@@ -147,14 +169,14 @@ const LeaveRequests = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h3 style={{ margin: 0 }}>Document Preview</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <a
-                  href={previewUrl}
-                  download
+                <button
+                  type="button"
+                  onClick={() => downloadDocument(previewUrl)}
                   className="btn btn--primary btn--sm"
                   title="Download document"
                 >
                   ⬇ Download
-                </a>
+                </button>
                 <button
                   className="btn btn--ghost btn--sm"
                   onClick={() => setPreviewUrl(null)}

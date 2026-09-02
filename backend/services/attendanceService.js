@@ -6,6 +6,18 @@ const idempotencyCache = new Map();
 
 const IDEMPOTENCY_TTL = 24 * 60 * 60 * 1000;
 
+// Attendance is keyed one-per-student/subject/day (see the unique index on the
+// Attendance model), but callers pass in Date values that may carry a time
+// component (e.g. a QR session's createdAt-derived date, or a client's
+// `new Date().toISOString()`). Normalizing to midnight here — the single write
+// path all callers go through — keeps that uniqueness guarantee real instead
+// of letting same-day records slip past it with mismatched timestamps.
+const normalizeDate = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 export const checkIdempotency = (key) => {
   if (!key) return null;
   const cached = idempotencyCache.get(key);
@@ -26,6 +38,7 @@ export const setIdempotencyCache = (key, response) => {
 export const bulkUpsertAttendance = async ({ records, date, subject, markedBy, ipAddress, userAgent }) => {
   const results = [];
   const errors = [];
+  const normalizedDate = normalizeDate(date);
 
   for (let i = 0; i < records.length; i += 1) {
     const { studentId, status } = records[i];
@@ -36,14 +49,14 @@ export const bulkUpsertAttendance = async ({ records, date, subject, markedBy, i
     }
 
     try {
-      const existing = await Attendance.findOne({ student: studentId, subject, date });
+      const existing = await Attendance.findOne({ student: studentId, subject, date: normalizedDate });
 
       const result = await Attendance.findOneAndUpdate(
-        { student: studentId, subject, date },
+        { student: studentId, subject, date: normalizedDate },
         {
           student: studentId,
           subject,
-          date,
+          date: normalizedDate,
           status,
           markedBy,
           isActive: true,
@@ -57,7 +70,7 @@ export const bulkUpsertAttendance = async ({ records, date, subject, markedBy, i
         documentId: result._id,
         performedBy: markedBy,
         oldValue: existing ? { status: existing.status } : null,
-        newValue: { status, subject, date },
+        newValue: { status, subject, date: normalizedDate },
         ipAddress,
         userAgent,
       });
@@ -73,7 +86,7 @@ export const bulkUpsertAttendance = async ({ records, date, subject, markedBy, i
 };
 
 export const getAttendanceByDateAndSubject = async (date, subject) => {
-  const records = await Attendance.find({ date, subject, isActive: true })
+  const records = await Attendance.find({ date: normalizeDate(date), subject, isActive: true })
     .populate('student', 'name email')
     .populate('markedBy', 'name')
     .lean();
@@ -140,11 +153,17 @@ export const getStudentStats = async (studentId) => {
   };
 };
 
-export const getDefaulterList = async ({ subject, threshold = 75, className, branch, section, page, limit }) => {
+export const getDefaulterList = async ({ subject, search, threshold = 75, className, branch, section, page, limit }) => {
   const matchQuery = { isActive: true, role: 'student' };
   if (className) matchQuery.className = className;
   if (branch) matchQuery.branch = branch;
   if (section) matchQuery.section = section;
+  if (search) {
+    matchQuery.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } },
+    ];
+  }
 
   const { default: User } = await import('../models/User.js');
   const students = await User.find(matchQuery).lean();

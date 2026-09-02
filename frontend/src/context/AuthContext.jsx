@@ -11,8 +11,20 @@ export const useAuth = () => {
   return ctx;
 };
 
+const readStoredUser = () => {
+  try {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  // Read synchronously on first render (not in a useEffect) so ProtectedRoute
+  // never sees a false "logged out" state on a hard refresh before an effect
+  // has a chance to run.
+  const [user, setUser] = useState(readStoredUser);
   const [loading, setLoading] = useState(false);
   const refreshIntervalRef = useRef(null);
 
@@ -87,17 +99,6 @@ export const AuthProvider = ({ children }) => {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
     };
   }, [user, startRefreshInterval]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        clearAuth();
-      }
-    }
-  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, clearAuth }}>
