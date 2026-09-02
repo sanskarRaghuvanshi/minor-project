@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import { ENDPOINTS } from '../api/endpoints';
+import AuthLayout from '../components/auth/AuthLayout';
+import Logo from '../components/common/Logo';
 
 const ResetPassword = () => {
   const { token } = useParams();
@@ -28,8 +30,9 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card card">
+    <AuthLayout>
+      <div className="auth-card">
+        <Logo size={48} tagline="Smart student attendance management" />
         <div className="auth-card__header">
           <h1>Reset Password</h1>
           <p>Enter your new password</p>
@@ -38,14 +41,20 @@ const ResetPassword = () => {
           {error && <div className="alert alert--error" role="alert">{error}</div>}
           <div className="form-group">
             <label htmlFor="password">New Password</label>
-            <input id="password" name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} placeholder="Min 6 chars, at least one letter & one number" required minLength={6} />
+            <div className="input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">lock</span>
+              <input id="password" name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} placeholder="Min 6 chars, at least one letter & one number" required minLength={6} />
+            </div>
           </div>
           <div className="form-group">
             <label htmlFor="confirmPassword">Confirm Password</label>
-            <input id="confirmPassword" name="confirmPassword" type={showPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={(e) => setForm((p) => ({ ...p, confirmPassword: e.target.value }))} placeholder="Repeat your password" required />
+            <div className="input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">lock</span>
+              <input id="confirmPassword" name="confirmPassword" type={showPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={(e) => setForm((p) => ({ ...p, confirmPassword: e.target.value }))} placeholder="Repeat your password" required />
+            </div>
           </div>
           <div className="form-group">
-            <label>
+            <label className="checkbox-label" style={{ background: 'none', padding: 0 }}>
               <input type="checkbox" checked={showPassword} onChange={() => setShowPassword(!showPassword)} /> Show passwords
             </label>
           </div>
@@ -57,7 +66,7 @@ const ResetPassword = () => {
           <p><Link to="/login">Back to Sign In</Link></p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

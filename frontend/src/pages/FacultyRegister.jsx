@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CascadingSelect from '../components/auth/CascadingSelect';
+import AuthLayout from '../components/auth/AuthLayout';
+import Logo from '../components/common/Logo';
 
 const FacultyRegister = () => {
   const [form, setForm] = useState({
@@ -45,11 +47,12 @@ const FacultyRegister = () => {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card card">
+    <AuthLayout>
+      <div className="auth-card">
+        <Logo size={48} tagline="Smart student attendance management" />
         <div className="auth-card__header">
           <h1>Faculty Registration</h1>
-          <p>Create your faculty account</p>
+          <p>Create your institutional faculty account.</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {error && <div className="alert alert--error" role="alert">{error}</div>}
@@ -83,15 +86,24 @@ const FacultyRegister = () => {
 
           <div className="form-group">
             <label htmlFor="name">Full Name</label>
-            <input id="name" name="name" value={form.name} onChange={handleChange} placeholder="Dr. John Doe" required />
+            <div className="input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">person</span>
+              <input id="name" name="name" value={form.name} onChange={handleChange} placeholder="Enter your full name" required />
+            </div>
           </div>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="faculty@institute.edu" required />
+            <label htmlFor="email">Email Address</label>
+            <div className="input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">mail</span>
+              <input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="Enter your email" required />
+            </div>
           </div>
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input id="password" name="password" type="password" value={form.password} onChange={handleChange} placeholder="Min 6 chars, at least one letter &amp; one number" required minLength={6} />
+            <div className="input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">lock</span>
+              <input id="password" name="password" type="password" value={form.password} onChange={handleChange} placeholder="Enter your password" required minLength={6} />
+            </div>
           </div>
           <CascadingSelect
             role={form.role}
@@ -113,7 +125,7 @@ const FacultyRegister = () => {
           <p><Link to="/register/student">Register as Student</Link></p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

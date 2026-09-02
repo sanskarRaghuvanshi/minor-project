@@ -61,53 +61,62 @@ const CascadingSelect = ({ onBranchChange, onClassChange, onSectionChange, onSub
   return (
     <div className="cascading-select">
       <div className="form-group">
-        <label htmlFor="branch">Branch</label>
-        <select
-          id="branch"
-          value={selectedBranch || ''}
-          onChange={(e) => handleBranchChange(e.target.value)}
-          disabled={loading.branches}
-          required
-        >
-          <option value="">Select Branch</option>
-          {branches.map((b) => (
-            <option key={b.name} value={b.name}>{b.name}</option>
-          ))}
-        </select>
+        <label htmlFor="branch">Department</label>
+        <div className="input-icon">
+          <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">account_balance</span>
+          <select
+            id="branch"
+            value={selectedBranch || ''}
+            onChange={(e) => handleBranchChange(e.target.value)}
+            disabled={loading.branches}
+            required
+          >
+            <option value="">Select Department</option>
+            {branches.map((b) => (
+              <option key={b.name} value={b.name}>{b.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {selectedBranch && (
         <div className="form-group">
-          <label htmlFor="class">Year</label>
-          <select
-            id="class"
-            value={selectedClass || ''}
-            onChange={(e) => { onClassChange(e.target.value); onSubjectsChange([]); }}
-            disabled={loading.classes}
-            required
-          >
-            <option value="">Select Class</option>
-            {classes.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <label htmlFor="class">Class</label>
+          <div className="input-icon">
+            <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">school</span>
+            <select
+              id="class"
+              value={selectedClass || ''}
+              onChange={(e) => { onClassChange(e.target.value); onSubjectsChange([]); }}
+              disabled={loading.classes}
+              required
+            >
+              <option value="">Select Class</option>
+              {classes.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
       {role !== 'admin' && selectedBranch && sections.length > 0 && (
         <div className="form-group">
           <label htmlFor="section">Section</label>
-          <select
-            id="section"
-            value={selectedSection || ''}
-            onChange={(e) => onSectionChange && onSectionChange(e.target.value)}
-            required
-          >
-            <option value="">Select Section</option>
-            {sections.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          <div className="input-icon">
+            <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">groups</span>
+            <select
+              id="section"
+              value={selectedSection || ''}
+              onChange={(e) => onSectionChange && onSectionChange(e.target.value)}
+              required
+            >
+              <option value="">Select Section</option>
+              {sections.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 

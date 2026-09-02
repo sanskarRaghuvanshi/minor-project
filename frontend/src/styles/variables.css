@@ -1,22 +1,29 @@
 :root {
-  /* Colors */
-  --primary: #4f46e5;
-  --primary-dark: #4338ca;
-  --primary-light: #818cf8;
-  --success: #22c55e;
+  /* Colors — AttendIQ palette */
+  --primary: #1d4ed8;
+  --primary-dark: #1e3a8a;
+  --primary-light: #3b82f6;
+  --primary-container: #eef2ff;
+  --on-primary-container: #1d4ed8;
+  --success: #16a34a;
+  --success-container: #dcfce7;
   --warning: #f59e0b;
-  --danger: #ef4444;
+  --warning-container: #fef3c7;
+  --danger: #dc2626;
+  --danger-container: #fee2e2;
   --info: #3b82f6;
+  --accent-purple: #8b5cf6;
+  --accent-purple-container: #ede9fe;
 
   /* Light mode */
-  --bg: #f8fafc;
+  --bg: #f5f7fb;
   --card: #ffffff;
   --surface: #f1f5f9;
-  --text-primary: #1e293b;
+  --text-primary: #111827;
   --text-secondary: #64748b;
   --text-muted: #94a3b8;
   --border: #e2e8f0;
-  --border-focus: #4f46e5;
+  --border-focus: #1d4ed8;
 
   /* Typography */
   --font: 'Inter', system-ui, -apple-system, sans-serif;
@@ -54,8 +61,6 @@
   /* Transitions */
   --transition: 0.2s ease;
 
-  /* Sidebar */
-  --sidebar-width: 260px;
-  --sidebar-bg: #1e1b4b;
-  --sidebar-text: #ffffff;
+  /* Sidebar (light card style) */
+  --sidebar-width: 264px;
 }

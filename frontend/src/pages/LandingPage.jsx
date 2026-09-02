@@ -1,5 +1,6 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/common/Logo';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -21,7 +22,7 @@ const LandingPage = () => {
       <header className="smartattend-nav-wrapper">
         <nav className="smartattend-nav">
           <div className="smartattend-brand">
-            <span className="smartattend-logo-text">SmartAttend</span>
+            <Logo size={32} />
           </div>
 
           <div className="smartattend-nav-links">

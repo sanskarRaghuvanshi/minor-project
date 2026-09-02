@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AuthLayout from '../components/auth/AuthLayout';
+import Logo from '../components/common/Logo';
 
 const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -43,8 +45,9 @@ const Login = () => {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card card">
+    <AuthLayout>
+      <div className="auth-card">
+        <Logo size={48} tagline="Smart student attendance management" />
         <div className="auth-card__header">
           <h1>Welcome Back</h1>
           <p>Sign in to your account</p>
@@ -52,22 +55,26 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {error && <div className="alert alert--error" role="alert">{error}</div>}
           <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              autoComplete="email"
-              required
-              aria-required="true"
-            />
+            <label htmlFor="email">Email Address</label>
+            <div className="input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">mail</span>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="Enter your email"
+                autoComplete="email"
+                required
+                aria-required="true"
+              />
+            </div>
           </div>
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <div className="password-input">
+            <div className="password-input input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">lock</span>
               <input
                 id="password"
                 name="password"
@@ -86,7 +93,7 @@ const Login = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? '🙈' : '👁️'}
+                <span className="material-symbols-outlined" aria-hidden="true">{showPassword ? 'visibility_off' : 'visibility'}</span>
               </button>
             </div>
           </div>
@@ -102,7 +109,7 @@ const Login = () => {
           <p>Don&apos;t have an account? <Link to="/register/student">Register</Link></p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

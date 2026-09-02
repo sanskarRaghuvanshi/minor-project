@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import { ENDPOINTS } from '../api/endpoints';
+import AuthLayout from '../components/auth/AuthLayout';
+import Logo from '../components/common/Logo';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -26,8 +28,9 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card card">
+    <AuthLayout>
+      <div className="auth-card">
+        <Logo size={48} tagline="Smart student attendance management" />
         <div className="auth-card__header">
           <h1>Forgot Password</h1>
           <p>Enter your email to receive a reset link</p>
@@ -36,8 +39,11 @@ const ForgotPassword = () => {
           {error && <div className="alert alert--error" role="alert">{error}</div>}
           {message && <div className="alert alert--success" role="alert">{message}</div>}
           <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} placeholder="you@example.com" required />
+            <label htmlFor="email">Email Address</label>
+            <div className="input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">mail</span>
+              <input id="email" name="email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} placeholder="Enter your email" required />
+            </div>
           </div>
           <button type="submit" className="btn btn--primary btn--full" disabled={loading}>
             {loading ? 'Sending...' : 'Send Reset Link'}
@@ -47,7 +53,7 @@ const ForgotPassword = () => {
           <p><Link to="/login">Back to Sign In</Link></p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 
