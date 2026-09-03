@@ -11,12 +11,59 @@ const DEFAULT_BRANCHES = [
 ];
 
 const DEFAULT_CLASSES = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-const DEFAULT_SUBJECTS = ['Data Structures & Algorithms', 'Database Management Systems', 'Operating Systems', 'Computer Networks', 'Software Engineering', 'Web Technologies'];
+
+const BRANCH_YEAR_SUBJECTS = {
+  'Computer Science': {
+    '1st Year': ['Programming in C', 'Engineering Physics', 'Basic Electrical Engineering', 'Mathematics-I', 'Engineering Drawing'],
+    '2nd Year': ['Data Structures & Algorithms', 'Object Oriented Programming', 'Discrete Mathematics', 'Digital Electronics', 'Computer Architecture'],
+    '3rd Year': ['Database Management Systems', 'Operating Systems', 'Computer Networks', 'Software Engineering', 'Theory of Computation', 'Design & Analysis of Algorithms'],
+    '4th Year': ['Artificial Intelligence & ML', 'Cloud Computing', 'Compiler Design', 'Cyber Security', 'Information Retrieval', 'Web Technologies'],
+  },
+  'Information Technology': {
+    '1st Year': ['Programming in C', 'Engineering Chemistry', 'Basic Electronics', 'Mathematics-I', 'Environmental Science'],
+    '2nd Year': ['Data Structures', 'Python Programming', 'Object Oriented Systems', 'Digital Logic', 'Formal Languages'],
+    '3rd Year': ['Database Systems', 'Operating Systems', 'Computer Networks', 'Web Technologies', 'Software Project Management'],
+    '4th Year': ['Machine Learning', 'Big Data Analytics', 'Information Security', 'Internet of Things (IoT)', 'Mobile App Development'],
+  },
+  'Electronics': {
+    '1st Year': ['Engineering Physics', 'Basic Electrical', 'Programming in C', 'Mathematics-I', 'Engineering Mechanics'],
+    '2nd Year': ['Electronic Devices & Circuits', 'Signals & Systems', 'Network Theory', 'Digital System Design', 'Electromagnetic Fields'],
+    '3rd Year': ['Analog & Digital Communication', 'Microprocessors & Microcontrollers', 'Control Systems', 'VLSI Design', 'Linear Integrated Circuits'],
+    '4th Year': ['Embedded Systems', 'Wireless Communications', 'Optical Fiber Communication', 'Digital Signal Processing', 'Robotics & Automation'],
+  },
+  'Mechanical': {
+    '1st Year': ['Engineering Mechanics', 'Engineering Graphics', 'Basic Electrical', 'Mathematics-I', 'Workshop Practice'],
+    '2nd Year': ['Thermodynamics', 'Strength of Materials', 'Fluid Mechanics', 'Manufacturing Processes', 'Kinematics of Machinery'],
+    '3rd Year': ['Heat & Mass Transfer', 'Design of Machine Elements', 'Dynamics of Machinery', 'Industrial Engineering', 'CAD/CAM'],
+    '4th Year': ['Automobile Engineering', 'Power Plant Engineering', 'Mechatronics', 'Refrigeration & Air Conditioning', 'Finite Element Analysis'],
+  },
+  'Civil': {
+    '1st Year': ['Engineering Physics', 'Engineering Mechanics', 'Basic Electrical', 'Mathematics-I', 'Environmental Engineering'],
+    '2nd Year': ['Fluid Mechanics', 'Surveying', 'Strength of Materials', 'Building Materials & Construction', 'Engineering Geology'],
+    '3rd Year': ['Structural Analysis', 'Geotechnical Engineering', 'Transportation Engineering', 'Design of RC Structures', 'Hydrology & Water Resources'],
+    '4th Year': ['Design of Steel Structures', 'Construction Planning & Management', 'Environmental Impact Assessment', 'Earthquake Engineering', 'Town Planning'],
+  },
+};
+
+const getFallbackSubjects = (branchStr, classStr) => {
+  if (!branchStr) return [];
+  let foundKey = Object.keys(BRANCH_YEAR_SUBJECTS).find((key) =>
+    branchStr.toLowerCase().includes(key.toLowerCase())
+  );
+  if (!foundKey) foundKey = 'Computer Science';
+  const branchMap = BRANCH_YEAR_SUBJECTS[foundKey];
+
+  if (classStr && branchMap[classStr]) {
+    return branchMap[classStr];
+  }
+  // Default to all branch subjects if class not selected yet
+  return Object.values(branchMap).flat();
+};
 
 const CascadingSelect = ({ onBranchChange, onClassChange, onSectionChange, onSubjectsChange, selectedBranch, selectedClass, selectedSection, selectedSubjects = [], role }) => {
   const [branches, setBranches] = useState(DEFAULT_BRANCHES);
   const [classes, setClasses] = useState(DEFAULT_CLASSES);
-  const [subjects, setSubjects] = useState(DEFAULT_SUBJECTS);
+  const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState({ branches: false, classes: false, subjects: false });
 
   useEffect(() => {
@@ -44,13 +91,24 @@ const CascadingSelect = ({ onBranchChange, onClassChange, onSectionChange, onSub
   }, [selectedBranch]);
 
   useEffect(() => {
-    if (!selectedBranch || !selectedClass) return;
+    const fallbacks = getFallbackSubjects(selectedBranch, selectedClass);
+    if (!selectedBranch) {
+      setSubjects([]);
+      return;
+    }
+
     setLoading((prev) => ({ ...prev, subjects: true }));
     axiosInstance.get(ENDPOINTS.BRANCHES.SUBJECTS(selectedBranch, selectedClass))
       .then(({ data }) => {
-        if (data?.data && data.data.length > 0) setSubjects(data.data);
+        if (data?.data && data.data.length > 0) {
+          setSubjects(data.data);
+        } else {
+          setSubjects(fallbacks);
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        setSubjects(fallbacks);
+      })
       .finally(() => setLoading((prev) => ({ ...prev, subjects: false })));
   }, [selectedBranch, selectedClass]);
 
@@ -145,15 +203,27 @@ const CascadingSelect = ({ onBranchChange, onClassChange, onSectionChange, onSub
         <>
           {/* Subjects (You will manage) Dropdown */}
           <div className="form-group">
-            <label htmlFor="subjectSelect">Subjects (You will manage)</label>
+            <label htmlFor="subjectSelect">
+              Subjects (You will manage)
+              {selectedBranch && selectedClass && (
+                <span className="subject-hint"> — {selectedBranch.split(' ')[0]} ({selectedClass})</span>
+              )}
+            </label>
             <div className="input-icon">
               <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">menu_book</span>
               <select
                 id="subjectSelect"
                 value=""
                 onChange={(e) => handleAddSubject(e.target.value)}
+                disabled={!selectedBranch || subjects.length === 0}
               >
-                <option value="" disabled>Choose Subject</option>
+                <option value="" disabled>
+                  {!selectedBranch
+                    ? 'Select Branch first'
+                    : subjects.length === 0
+                    ? 'Loading subjects...'
+                    : 'Choose Subject'}
+                </option>
                 {subjects.map((s) => (
                   <option key={s} value={s} disabled={selectedSubjects.includes(s)}>
                     {s} {selectedSubjects.includes(s) ? '(Added)' : ''}

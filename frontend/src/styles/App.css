@@ -1372,6 +1372,12 @@ tr:hover { background: var(--surface); }
   color: #ef4444;
 }
 
+.subject-hint {
+  font-size: 0.75rem;
+  color: #2563eb;
+  font-weight: 600;
+}
+
 @media (max-width: 900px) {
   .auth-split {
     grid-template-columns: 1fr;
