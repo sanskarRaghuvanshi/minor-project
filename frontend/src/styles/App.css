@@ -701,22 +701,24 @@ tr:hover { background: var(--surface); }
   top: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background: var(--sidebar-bg);
-  color: var(--sidebar-text);
+  background: #0f172a !important;
+  color: #f8fafc !important;
   z-index: 500;
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease;
+  border-right: 1px solid #1e293b;
 }
 
 .sidebar__header {
   padding: var(--space-5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #1e293b;
 }
 
 .sidebar__title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 800;
+  color: #ffffff !important;
 }
 
 .sidebar__nav {
@@ -730,55 +732,60 @@ tr:hover { background: var(--surface); }
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-5);
-  color: rgba(255, 255, 255, 0.7);
+  color: #94a3b8 !important;
   text-decoration: none;
   transition: all var(--transition);
   font-size: var(--small-size);
+  font-weight: 500;
   min-height: 44px;
 }
 
 .sidebar__link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
 }
 
 .sidebar__link--active {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border-left: 4px solid var(--primary);
+  background: rgba(37, 99, 235, 0.2) !important;
+  color: #60a5fa !important;
+  border-left: 4px solid #2563eb !important;
   padding-left: calc(var(--space-5) - 4px);
+  font-weight: 700;
 }
 
 .sidebar__footer {
   padding: var(--space-4) var(--space-5);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid #1e293b;
+  background: #090d16;
 }
 
 .sidebar__user { margin-bottom: var(--space-3); }
 
 .sidebar__user-name {
   display: block;
-  font-weight: 600;
+  font-weight: 700;
   font-size: var(--small-size);
+  color: #ffffff !important;
 }
 
 .sidebar__user-role {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: #94a3b8 !important;
   text-transform: capitalize;
-}
-
-.sidebar__theme-btn {
-  width: 100%;
-  justify-content: flex-start;
-  margin-bottom: var(--space-2);
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .sidebar__logout {
   width: 100%;
   justify-content: flex-start;
-  color: rgba(255, 255, 255, 0.7);
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.sidebar__logout:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
 }
 
 .sidebar-toggle {

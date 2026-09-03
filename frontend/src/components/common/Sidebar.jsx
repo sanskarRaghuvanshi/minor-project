@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 
 const facultyLinks = [
   { to: '/faculty/dashboard', label: 'Dashboard', icon: '📊' },
@@ -38,7 +37,6 @@ const studentLinks = [
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
-  const { toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
 
   const links = user?.role === 'faculty'
@@ -69,7 +67,7 @@ const Sidebar = () => {
       </button>
       <aside className={`sidebar ${isOpen ? 'sidebar--open' : ''}`} aria-label="Main navigation">
         <div className="sidebar__header">
-          <h2 className="sidebar__title">Attendance</h2>
+          <h2 className="sidebar__title">AttendIQ</h2>
         </div>
         <nav className="sidebar__nav">
           {links.map((link) => (
@@ -89,9 +87,6 @@ const Sidebar = () => {
             <span className="sidebar__user-name">{user?.name}</span>
             <span className="sidebar__user-role">{user?.role}</span>
           </div>
-          <button className="btn btn--ghost sidebar__theme-btn" onClick={toggleTheme} type="button" aria-label="Toggle theme">
-            {isDark ? '☀️' : '🌙'}
-          </button>
           <button className="btn btn--ghost sidebar__logout" onClick={handleLogout} type="button">
             Logout
           </button>
