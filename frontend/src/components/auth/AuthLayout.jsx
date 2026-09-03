@@ -59,7 +59,7 @@ const AuthLayout = ({ children, pageType }) => {
   const promo = PROMO_DATA[currentType] || PROMO_DATA.faculty;
 
   return (
-    <div className="auth-split">
+    <div className="auth-split" data-theme="light">
       {/* Background Dots Pattern */}
       <div className="auth-split__dots-pattern" aria-hidden="true">
         <svg width="120" height="120" fill="currentColor">

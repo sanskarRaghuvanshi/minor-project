@@ -859,14 +859,75 @@ tr:hover { background: var(--surface); }
 .stat-card__value--red { color: var(--danger); }
 
 /* ===== Auth Pages (split promo + form panel) ===== */
-.auth-split {
+.auth-split,
+[data-theme="dark"] .auth-split {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --surface: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
+  --border-focus: #2563eb;
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: radial-gradient(circle at 15% 25%, rgba(219, 234, 254, 0.8) 0%, rgba(238, 242, 255, 0.5) 45%, rgba(248, 250, 252, 1) 100%);
+  background: radial-gradient(circle at 15% 25%, rgba(219, 234, 254, 0.8) 0%, rgba(238, 242, 255, 0.5) 45%, rgba(248, 250, 252, 1) 100%) !important;
+  color: #0f172a !important;
   position: relative;
   overflow-x: hidden;
   align-items: center;
+}
+
+.auth-split .auth-card,
+[data-theme="dark"] .auth-split .auth-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #f1f5f9 !important;
+  box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.12) !important;
+}
+
+.auth-split input,
+.auth-split select,
+[data-theme="dark"] .auth-split input,
+[data-theme="dark"] .auth-split select {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+.auth-split label,
+.auth-split h1,
+[data-theme="dark"] .auth-split label,
+[data-theme="dark"] .auth-split h1 {
+  color: #0f172a !important;
+}
+
+.auth-split .auth-card__header p,
+[data-theme="dark"] .auth-split .auth-card__header p,
+.auth-split .auth-card__footer,
+[data-theme="dark"] .auth-split .auth-card__footer {
+  color: #64748b !important;
+  border-top-color: #f1f5f9 !important;
+}
+
+.auth-split .role-toggle__btn,
+[data-theme="dark"] .auth-split .role-toggle__btn {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.auth-split .role-toggle__btn--active,
+[data-theme="dark"] .auth-split .role-toggle__btn--active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+}
+
+.auth-split .logo__wordmark,
+[data-theme="dark"] .auth-split .logo__wordmark {
+  color: #0f172a !important;
 }
 
 .auth-split__dots-pattern {
