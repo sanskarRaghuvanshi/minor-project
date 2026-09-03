@@ -20,6 +20,7 @@ export const ENDPOINTS = {
     USERS: `${BASE}/admin/users`,
     TOGGLE_USER_STATUS: (id) => `${BASE}/admin/users/${id}/status`,
     BRANCHES: `${BASE}/admin/branches`,
+    DEFAULTERS: `${BASE}/admin/defaulters`,
   },
   LEAVE: {
     APPLY: `${BASE}/leave/apply`,

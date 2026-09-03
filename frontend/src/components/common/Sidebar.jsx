@@ -23,6 +23,7 @@ const coordinatorLinks = [
 const adminLinks = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
   { to: '/admin/users', label: 'Users', icon: '👥' },
+  { to: '/admin/defaulters', label: 'Defaulters', icon: '⚠️' },
 ];
 
 const studentLinks = [
