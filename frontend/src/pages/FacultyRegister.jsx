@@ -10,6 +10,7 @@ const FacultyRegister = () => {
     name: '', email: '', password: '', role: 'faculty',
     branch: '', className: '', section: '', subjects: [],
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -47,12 +48,12 @@ const FacultyRegister = () => {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout pageType={form.role}>
       <div className="auth-card">
         <Logo size={48} tagline="Smart student attendance management" />
         <div className="auth-card__header">
-          <h1>Faculty Registration</h1>
-          <p>Create your institutional faculty account.</p>
+          <h1>{form.role === 'coordinator' ? 'Coordinator Registration' : 'Faculty Registration'}</h1>
+          <p>{form.role === 'coordinator' ? 'Create your administrative account to manage your institution.' : 'Create your institutional faculty account.'}</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {error && <div className="alert alert--error" role="alert">{error}</div>}
@@ -74,13 +75,13 @@ const FacultyRegister = () => {
                 onClick={() => handleRoleChange('coordinator')}
                 aria-pressed={form.role === 'coordinator'}
               >
-                Class Coordinator
+                Coordinator
               </button>
             </div>
             <p className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '6px' }}>
               {form.role === 'coordinator'
-                ? 'Coordinators review leave requests, see class teachers and students, and receive class feedback.'
-                : 'Faculty mark attendance, track defaulters and submit class feedback.'}
+                ? 'Coordinators review leave requests, manage subjects & classes, and oversee academic progress.'
+                : 'Faculty mark attendance, track defaulters, and communicate with students.'}
             </p>
           </div>
 
@@ -100,9 +101,28 @@ const FacultyRegister = () => {
           </div>
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <div className="input-icon">
+            <div className="password-input input-icon">
               <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">lock</span>
-              <input id="password" name="password" type="password" value={form.password} onChange={handleChange} placeholder="Enter your password" required minLength={6} />
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
             </div>
           </div>
           <CascadingSelect
@@ -117,12 +137,12 @@ const FacultyRegister = () => {
             onSubjectsChange={(v) => setForm((prev) => ({ ...prev, subjects: v }))}
           />
           <button type="submit" className="btn btn--primary btn--full" disabled={loading}>
-            {loading ? 'Registering...' : form.role === 'coordinator' ? 'Register as Coordinator' : 'Register as Faculty'}
+            {loading ? 'Registering...' : form.role === 'coordinator' ? 'Register Coordinator Account' : 'Register Faculty Account'}
           </button>
         </form>
         <div className="auth-card__footer">
-          <p>Already have an account? <Link to="/login">Sign In</Link></p>
-          <p><Link to="/register/student">Register as Student</Link></p>
+          <p>Already have an account? <Link to="/login">Log in</Link></p>
+          <p>Registering as student? <Link to="/register/student">Student Registration</Link></p>
         </div>
       </div>
     </AuthLayout>

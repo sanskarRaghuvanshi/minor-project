@@ -10,6 +10,7 @@ const StudentRegister = () => {
     name: '', email: '', password: '', role: 'student',
     branch: '', className: '', section: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -41,12 +42,12 @@ const StudentRegister = () => {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout pageType="student">
       <div className="auth-card">
         <Logo size={48} tagline="Smart student attendance management" />
         <div className="auth-card__header">
           <h1>Student Registration</h1>
-          <p>Create your student account</p>
+          <p>Create your institutional student account.</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {error && <div className="alert alert--error" role="alert">{error}</div>}
@@ -54,21 +55,40 @@ const StudentRegister = () => {
             <label htmlFor="name">Full Name</label>
             <div className="input-icon">
               <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">person</span>
-              <input id="name" name="name" value={form.name} onChange={handleChange} placeholder="Enter your full name" required />
+              <input id="name" name="name" value={form.name} onChange={handleChange} placeholder="Jane Smith" required />
             </div>
           </div>
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="email">Student Email Address</label>
             <div className="input-icon">
               <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">mail</span>
-              <input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="student@institute.edu" required />
+              <input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="student@institution.edu" required />
             </div>
           </div>
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <div className="input-icon">
+            <div className="password-input input-icon">
               <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">lock</span>
-              <input id="password" name="password" type="password" value={form.password} onChange={handleChange} placeholder="Min 6 chars, at least one letter &amp; one number" required minLength={6} />
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Min 6 chars, at least one letter & one number"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
             </div>
           </div>
           <CascadingSelect
@@ -83,12 +103,12 @@ const StudentRegister = () => {
             onSubjectsChange={() => {}}
           />
           <button type="submit" className="btn btn--primary btn--full" disabled={loading}>
-            {loading ? 'Registering...' : 'Register as Student'}
+            {loading ? 'Registering...' : 'Register Student Account'}
           </button>
         </form>
         <div className="auth-card__footer">
-          <p>Already have an account? <Link to="/login">Sign In</Link></p>
-          <p><Link to="/register/faculty">Register as Faculty</Link></p>
+          <p>Already have an account? <Link to="/login">Log in</Link></p>
+          <p>Registering as staff? <Link to="/register/faculty">Faculty</Link></p>
         </div>
       </div>
     </AuthLayout>
