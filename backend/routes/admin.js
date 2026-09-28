@@ -9,5 +9,6 @@ router.get('/dashboard-stats', adminController.getDashboardStats);
 router.get('/users', adminController.getUsers);
 router.patch('/users/:id/status', adminController.toggleUserStatus);
 router.get('/branches', adminController.getBranches);
+router.get('/defaulters', adminController.getAdminDefaulters);
 
 export default router;

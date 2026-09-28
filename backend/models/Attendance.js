@@ -34,6 +34,20 @@ const attendanceSchema = new Schema(
       maxlength: [500, 'Correction reason cannot exceed 500 characters'],
     },
     isActive: { type: Boolean, default: true },
+    slotNumber: {
+      type: Number,
+      min: 1,
+      max: 8,
+      default: 1,
+    },
+    timeSlot: {
+      type: String,
+      default: '09:45 - 10:35',
+    },
+    room: {
+      type: String,
+      default: 'B05',
+    },
     source: {
       type: String,
       enum: ['manual', 'qr'],
@@ -50,9 +64,11 @@ const attendanceSchema = new Schema(
   },
 );
 
-attendanceSchema.index({ student: 1, subject: 1, date: 1 }, { unique: true });
+attendanceSchema.index({ student: 1, date: 1, slotNumber: 1 }, { unique: true });
+attendanceSchema.index({ student: 1, subject: 1, date: 1 });
 attendanceSchema.index({ markedBy: 1, date: -1 });
 attendanceSchema.index({ subject: 1, date: -1 });
+attendanceSchema.index({ slotNumber: 1 });
 attendanceSchema.index({ qrSession: 1 });
 attendanceSchema.index({ source: 1 });
 

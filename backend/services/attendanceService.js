@@ -35,10 +35,11 @@ export const setIdempotencyCache = (key, response) => {
   idempotencyCache.set(key, { response, timestamp: Date.now() });
 };
 
-export const bulkUpsertAttendance = async ({ records, date, subject, markedBy, ipAddress, userAgent }) => {
+export const bulkUpsertAttendance = async ({ records, date, subject, slotNumber = 1, timeSlot = '09:45 - 10:35', room = 'B05', markedBy, ipAddress, userAgent }) => {
   const results = [];
   const errors = [];
   const normalizedDate = normalizeDate(date);
+  const parsedSlotNumber = Number(slotNumber) || 1;
 
   for (let i = 0; i < records.length; i += 1) {
     const { studentId, status } = records[i];
@@ -49,14 +50,21 @@ export const bulkUpsertAttendance = async ({ records, date, subject, markedBy, i
     }
 
     try {
-      const existing = await Attendance.findOne({ student: studentId, subject, date: normalizedDate });
+      const existing = await Attendance.findOne({
+        student: studentId,
+        date: normalizedDate,
+        slotNumber: parsedSlotNumber,
+      });
 
       const result = await Attendance.findOneAndUpdate(
-        { student: studentId, subject, date: normalizedDate },
+        { student: studentId, date: normalizedDate, slotNumber: parsedSlotNumber },
         {
           student: studentId,
           subject,
           date: normalizedDate,
+          slotNumber: parsedSlotNumber,
+          timeSlot,
+          room,
           status,
           markedBy,
           isActive: true,
@@ -70,7 +78,7 @@ export const bulkUpsertAttendance = async ({ records, date, subject, markedBy, i
         documentId: result._id,
         performedBy: markedBy,
         oldValue: existing ? { status: existing.status } : null,
-        newValue: { status, subject, date: normalizedDate },
+        newValue: { status, subject, date: normalizedDate, slotNumber: parsedSlotNumber },
         ipAddress,
         userAgent,
       });
@@ -85,8 +93,10 @@ export const bulkUpsertAttendance = async ({ records, date, subject, markedBy, i
   return { results, errors };
 };
 
-export const getAttendanceByDateAndSubject = async (date, subject) => {
-  const records = await Attendance.find({ date: normalizeDate(date), subject, isActive: true })
+export const getAttendanceByDateAndSubject = async (date, subject, slotNumber) => {
+  const query = { date: normalizeDate(date), subject, isActive: true };
+  if (slotNumber) query.slotNumber = Number(slotNumber);
+  const records = await Attendance.find(query)
     .populate('student', 'name email')
     .populate('markedBy', 'name')
     .lean();

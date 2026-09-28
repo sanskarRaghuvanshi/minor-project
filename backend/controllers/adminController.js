@@ -96,3 +96,29 @@ export const getBranches = catchAsync(async (req, res) => {
     message: 'Branches retrieved',
   });
 });
+
+export const getAdminDefaulters = catchAsync(async (req, res) => {
+  const { getDefaulterList } = await import('../services/attendanceService.js');
+
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const { search, branch, className, subject } = req.query;
+  const threshold = parseFloat(req.query.threshold) || 75;
+
+  const { records, meta } = await getDefaulterList({
+    page,
+    limit,
+    search: search || undefined,
+    branch: branch || undefined,
+    className: className || undefined,
+    subject: subject || undefined,
+    threshold,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: records,
+    meta,
+    message: 'Admin defaulters retrieved',
+  });
+});

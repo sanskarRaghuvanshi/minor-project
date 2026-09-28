@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import ApiError from '../utils/ApiError.js';
 import catchAsync from '../utils/catchAsync.js';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'attendiq_jwt_super_secret_key_2026_dev_environment_min_32_chars';
 
 export const protect = catchAsync(async (req, _res, next) => {
   let token;

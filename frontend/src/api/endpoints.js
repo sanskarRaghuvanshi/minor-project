@@ -7,6 +7,7 @@ export const ENDPOINTS = {
     REFRESH: `${BASE}/auth/refresh`,
     LOGOUT: `${BASE}/auth/logout`,
     ME: `${BASE}/auth/me`,
+    UPDATE_PROFILE: `${BASE}/auth/update-profile`,
     FORGOT_PASSWORD: `${BASE}/auth/forgot-password`,
     RESET_PASSWORD: (token) => `${BASE}/auth/reset-password/${token}`,
   },
@@ -20,6 +21,7 @@ export const ENDPOINTS = {
     USERS: `${BASE}/admin/users`,
     TOGGLE_USER_STATUS: (id) => `${BASE}/admin/users/${id}/status`,
     BRANCHES: `${BASE}/admin/branches`,
+    DEFAULTERS: `${BASE}/admin/defaulters`,
   },
   LEAVE: {
     APPLY: `${BASE}/leave/apply`,

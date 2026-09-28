@@ -4,28 +4,27 @@ import { QRCodeSVG } from 'qrcode.react';
 import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useToast } from '../common/Toast';
-import { useAuth } from '../../context/AuthContext';
-import Skeleton from '../common/Skeleton';
+
+const getInitials = (name = '') =>
+  name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
 const QrSessionView = () => {
   const { token } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const { user } = useAuth();
 
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState({});
+  const [countdown, setCountdown] = useState(30);
 
   const fetchSession = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
     try {
       const { data } = await axiosInstance.get(ENDPOINTS.FACULTY.QR_SESSION(token));
       setSession(data.data);
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to load session', 'error');
-      navigate('/faculty/qr-generator');
+      addToast?.(err.response?.data?.message || 'Failed to load session', 'error');
+      navigate('/faculty/dashboard');
     } finally {
       setLoading(false);
     }
@@ -33,216 +32,224 @@ const QrSessionView = () => {
 
   useEffect(() => {
     fetchSession();
-    const interval = setInterval(fetchSession, 10000);
+    const interval = setInterval(fetchSession, 5000);
     return () => clearInterval(interval);
   }, [fetchSession]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev > 1 ? prev - 1 : 30));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleEndSession = async () => {
     if (!window.confirm('End this QR session? Students will no longer be able to scan.')) return;
     try {
       await axiosInstance.post(ENDPOINTS.FACULTY.QR_END(token));
-      addToast('Session ended', 'success');
-      navigate('/faculty/qr-generator');
+      addToast?.('Session ended and locked successfully', 'success');
+      navigate('/faculty/dashboard');
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to end session', 'error');
-    }
-  };
-
-  const handleModifyAttendance = async (studentId, newStatus) => {
-    const key = `${studentId}-${newStatus}`;
-    if (updating[key]) return;
-
-    setUpdating((prev) => ({ ...prev, [key]: true }));
-    try {
-      // A fresh key per call — keying on session+student alone would make a
-      // later correction (e.g. absent -> excused) collide with an earlier
-      // modification's key and silently return its cached response instead
-      // of applying the new status.
-      await axiosInstance.post(ENDPOINTS.FACULTY.ATTENDANCE, {
-        date: session.date.split('T')[0],
-        subject: session.subject,
-        records: [{ studentId, status: newStatus }],
-      }, {
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
-      });
-      addToast(`Attendance updated to ${newStatus}`, 'success');
-      fetchSession();
-    } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to update attendance', 'error');
-    } finally {
-      setUpdating((prev) => ({ ...prev, [key]: false }));
+      addToast?.(err.response?.data?.message || 'Failed to end session', 'error');
     }
   };
 
   const copyToken = () => {
     if (session?.sessionToken) {
       navigator.clipboard.writeText(session.sessionToken);
-      addToast('Session token copied', 'success');
+      addToast?.('Token copied to clipboard', 'success');
     }
   };
 
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const formatTime = (dateStr) => {
-    return new Date(dateStr).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="qr-session-view">
-        <div className="dashboard-home__header">
-          <h1>QR Session</h1>
-        </div>
-        <Skeleton variant="card" height="400px" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return null;
-  }
-
-  const scans = session.scannedStudents || [];
-  const scanCount = scans.length;
+  const scannedList = session?.scannedStudents || [];
 
   return (
-    <div className="qr-session-view">
-      <div className="dashboard-home__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", paddingBottom: '40px' }}>
+      
+      {/* Top Header */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '24px' }}>
         <div>
-          <h1>Live Session: {session.subject}</h1>
-          <p className="text-secondary">
-            {formatDate(session.date)} • {session.className}{session.section ? ` - ${session.section}` : ''}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span style={{ padding: '2px 10px', borderRadius: '100px', background: session?.isActive ? '#D1FAE5' : '#F1F5F9', color: session?.isActive ? '#059669' : '#64748B', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: session?.isActive ? '#10B981' : '#94A3B8', animation: session?.isActive ? 'pulse 1s infinite' : 'none' }} />
+              {session?.isActive ? 'Active Broadcast' : 'Session Ended'}
+            </span>
+            <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#CBD5E1' }} />
+            <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+              {session?.subject} • {session?.className}
+            </span>
+          </div>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
+            Live QR Session Monitor
+          </h1>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            className="btn btn--secondary"
-            onClick={copyToken}
+            onClick={() => navigate('/faculty/dashboard')}
+            style={{
+              padding: '8px 16px', borderRadius: '12px', background: '#fff', color: '#475569',
+              border: '1px solid #E2E8F0', cursor: 'pointer', fontSize: '12px', fontWeight: 600
+            }}
           >
-            Copy Token
+            Back to Dashboard
           </button>
-          {session.isActive && (
+          {session?.isActive && (
             <button
               type="button"
-              className="btn btn--danger"
               onClick={handleEndSession}
+              style={{
+                padding: '8px 16px', borderRadius: '12px', background: '#EF4444', color: '#fff',
+                border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(239,68,68,0.25)'
+              }}
             >
-              End Session
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lock</span>
+              Done & Lock Attendance
             </button>
           )}
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: '24px' }}>
-        <div className="card" style={{ flex: 1, minWidth: '280px', textAlign: 'center', padding: '24px' }}>
-          <h3 style={{ marginBottom: '16px' }}>QR Code (Active)</h3>
-          <div style={{ padding: '16px', background: '#fff', borderRadius: '8px', display: 'inline-block' }}>
-            <QRCodeSVG
-              value={JSON.stringify({
-                sessionToken: session.sessionToken,
-                subject: session.subject,
-                date: session.date,
-              })}
-              size={200}
-              level="M"
-              includeMargin={true}
-            />
-          </div>
-          <p style={{ marginTop: '12px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            Session Token: {session.sessionToken}
-          </p>
+      {loading ? (
+        <div style={{ background: '#fff', borderRadius: '24px', padding: '60px', textAlign: 'center', color: '#94A3B8' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '36px', animation: 'spin 1s infinite', display: 'block', marginBottom: '10px' }}>sync</span>
+          Connecting to session...
         </div>
-
-        <div className="card" style={{ flex: 1, minWidth: '280px' }}>
-          <h3 style={{ marginBottom: '16px' }}>Session Info</h3>
-          <div style={{ display: 'grid', gap: '12px' }}>
-            <div><strong>Subject:</strong> {session.subject}</div>
-            <div><strong>Date:</strong> {formatDate(session.date)}</div>
-            <div><strong>Branch:</strong> {session.branch}</div>
-            <div><strong>Class:</strong> {session.className}</div>
-            {session.section && <div><strong>Section:</strong> {session.section}</div>}
-            <div><strong>Total Scans:</strong> {scanCount}</div>
-            <div><strong>Status:</strong> {session.isActive ? '🟢 Active' : '🔴 Ended'}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3>Scanned Students ({scanCount})</h3>
-          {session.isActive && (
-            <span className="badge badge--success">Live updating every 10s</span>
-          )}
-        </div>
-
-        {scanCount === 0 ? (
-          <div className="empty-state" style={{ textAlign: 'center', padding: '48px' }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem' }}>No scans yet</p>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
-              Students will appear here as they scan the QR code
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+          
+          {/* Left Column: Projected QR Display */}
+          <div style={{
+            background: '#fff', borderRadius: '24px', padding: '28px',
+            boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid rgba(226,232,240,0.8)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center'
+          }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', marginBottom: '12px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>qr_code_scanner</span>
+            </div>
+            <h2 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+              Scan to Mark Attendance
+            </h2>
+            <p style={{ margin: '0 0 20px', fontSize: '12px', color: '#64748B' }}>
+              {session?.className} • {session?.subject}
             </p>
+
+            <div style={{
+              padding: '16px', background: '#F8FAFC', borderRadius: '20px',
+              border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(15,23,42,0.06)',
+              marginBottom: '16px'
+            }}>
+              <QRCodeSVG
+                value={JSON.stringify({
+                  sessionToken: session?.sessionToken,
+                  subject: session?.subject,
+                  date: session?.date,
+                })}
+                size={230}
+                level="M"
+                includeMargin={true}
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '280px', padding: '0 8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+                Refreshing ({countdown}s)
+              </span>
+              <span style={{ padding: '2px 8px', borderRadius: '6px', background: '#EFF6FF', color: '#1E50DE', fontSize: '11px', fontWeight: 800, fontFamily: 'monospace' }}>
+                #{session?.sessionToken?.slice(-6).toUpperCase()}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={copyToken}
+              style={{
+                marginTop: '16px', padding: '6px 14px', borderRadius: '10px',
+                background: '#F1F5F9', border: 'none', color: '#475569', fontSize: '11px',
+                fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>content_copy</span>
+              Copy Session Token
+            </button>
           </div>
-        ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Scanned At</th>
-                  <th>Current Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scans.map((scan, index) => (
-                  <tr key={scan.student._id}>
-                    <td>{index + 1}</td>
-                    <td>{scan.student.name}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{scan.student.email}</td>
-                    <td>{formatTime(scan.scannedAt)}</td>
-                    <td>
-                      <span className="badge badge--success">Present (QR)</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          type="button"
-                          className="btn btn--sm btn--secondary"
-                          onClick={() => handleModifyAttendance(scan.student._id, 'absent')}
-                          disabled={updating[`${scan.student._id}-absent`]}
-                        >
-                          {updating[`${scan.student._id}-absent`] ? '...' : 'Mark Absent'}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn--sm btn--warning"
-                          onClick={() => handleModifyAttendance(scan.student._id, 'excused')}
-                          disabled={updating[`${scan.student._id}-excused`]}
-                        >
-                          {updating[`${scan.student._id}-excused`] ? '...' : 'Mark Excused'}
-                        </button>
+
+          {/* Right Column: Live Scanned Students Feed */}
+          <div style={{
+            background: '#fff', borderRadius: '24px', padding: '24px',
+            boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid rgba(226,232,240,0.8)',
+            display: 'flex', flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid #F1F5F9', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
+                  Live Attendance Feed
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#94A3B8' }}>
+                  Students checked in real-time
+                </p>
+              </div>
+              <div style={{ padding: '4px 12px', borderRadius: '100px', background: '#ECFDF5', color: '#059669', fontSize: '12px', fontWeight: 800 }}>
+                {scannedList.length} Checked In
+              </div>
+            </div>
+
+            {scannedList.length === 0 ? (
+              <div style={{ padding: '48px 24px', textAlign: 'center', color: '#94A3B8', margin: 'auto' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '36px', color: '#CBD5E1', display: 'block', marginBottom: '8px' }}>hourglass_top</span>
+                <p style={{ margin: 0, fontWeight: 700, color: '#475569' }}>Waiting for student scans...</p>
+                <p style={{ margin: '4px 0 0', fontSize: '12px' }}>Students should open student app and scan the QR code</p>
+              </div>
+            ) : (
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '420px' }}>
+                {scannedList.map((item, idx) => {
+                  const student = item.student || {};
+                  return (
+                    <div
+                      key={student._id || idx}
+                      style={{
+                        padding: '10px 14px', borderRadius: '14px', background: '#FAFCFF',
+                        border: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        gap: '12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '34px', height: '34px', borderRadius: '10px',
+                          background: '#EFF6FF', color: '#2563EB', fontWeight: 700, fontSize: '12px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          {getInitials(student.name)}
+                        </div>
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '13px', color: '#0F172A' }}>
+                            {student.name || 'Student'}
+                          </strong>
+                          <span style={{ fontSize: '11px', color: '#94A3B8' }}>
+                            {student.email || ''}
+                          </span>
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+                      <span style={{
+                        padding: '3px 8px', borderRadius: '6px', background: '#D1FAE5',
+                        color: '#059669', fontSize: '11px', fontWeight: 700,
+                        display: 'flex', alignItems: 'center', gap: '4px'
+                      }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>check</span>
+                        Present
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

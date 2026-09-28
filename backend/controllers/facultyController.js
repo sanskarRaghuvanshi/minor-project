@@ -86,11 +86,14 @@ export const markAttendance = catchAsync(async (req, res) => {
     }
   }
 
-  const { date, subject, records } = req.body;
+  const { date, subject, slotNumber = 1, timeSlot = '09:45 - 10:35', room = 'B05', records } = req.body;
   const { results, errors: recordErrors } = await bulkUpsertAttendance({
     records,
     date: new Date(date),
     subject,
+    slotNumber,
+    timeSlot,
+    room,
     markedBy: req.user._id,
     ipAddress: req.ip,
     userAgent: req.headers['user-agent'],
@@ -125,6 +128,7 @@ export const markAttendance = catchAsync(async (req, res) => {
 export const getAttendanceValidations = [
   param('date').isISO8601().withMessage('Date must be ISO 8601 format'),
   param('subject').trim().notEmpty().withMessage('Subject is required'),
+  query('slotNumber').optional().isInt({ min: 1, max: 8 }).toInt(),
 ];
 
 export const getAttendance = catchAsync(async (req, res) => {
@@ -141,7 +145,8 @@ export const getAttendance = catchAsync(async (req, res) => {
   }
 
   const { date, subject } = req.params;
-  const records = await getAttendanceByDateAndSubject(new Date(date), subject);
+  const { slotNumber } = req.query;
+  const records = await getAttendanceByDateAndSubject(new Date(date), subject, slotNumber);
 
   res.status(200).json({
     success: true,
@@ -352,8 +357,12 @@ export const getDashboardStats = catchAsync(async (req, res) => {
   if (branch) studentQuery.branch = branch;
   if (className) studentQuery.className = className;
   if (faculty.section) studentQuery.section = faculty.section;
-  const totalStudents = await User.countDocuments(studentQuery);
 
+  const students = await User.find(studentQuery).select('_id name').lean();
+  const totalStudents = students.length;
+  const studentIds = students.map((s) => s._id);
+
+  // 1. Total distinct classes taken by faculty
   const classCount = await Attendance.aggregate([
     { $match: { markedBy: faculty._id, isActive: true } },
     { $group: { _id: { date: '$date', subject: '$subject' } } },
@@ -361,11 +370,113 @@ export const getDashboardStats = catchAsync(async (req, res) => {
   ]);
   const totalClasses = classCount[0]?.count || 0;
 
-  const { meta } = await getDefaulterList({ branch, className, section: faculty.section, page: 1, limit: 1 });
+  // 2. Real Weekly Trends (last distinct session dates for this cohort)
+  const recentDates = await Attendance.aggregate([
+    { $match: { student: { $in: studentIds }, isActive: true } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+        total: { $sum: 1 },
+        present: {
+          $sum: {
+            $cond: [{ $in: ['$status', ['present', 'excused']] }, 1, 0],
+          },
+        },
+      },
+    },
+    { $sort: { _id: 1 } },
+    { $limit: 7 },
+  ]);
+
+  const weeklyTrends = recentDates.map((d) => {
+    const dateObj = new Date(d._id);
+    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+    const percentage = d.total === 0 ? 0 : Math.round((d.present / d.total) * 100);
+    return {
+      date: d._id,
+      day: dayName,
+      percentage,
+      present: d.present,
+      total: d.total,
+    };
+  });
+
+  // 3. Real Student Attendance Distribution (High >85%, Safe 75-84%, Defaulters <75%)
+  let highAttendance = 0;
+  let safeZone = 0;
+  let defaulters = 0;
+
+  if (studentIds.length > 0) {
+    const studentStats = await Attendance.aggregate([
+      { $match: { student: { $in: studentIds }, isActive: true } },
+      {
+        $group: {
+          _id: '$student',
+          total: { $sum: 1 },
+          present: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['present', 'excused']] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const studentPctMap = new Map();
+    studentStats.forEach((st) => {
+      const pct = st.total === 0 ? 0 : (st.present / st.total) * 100;
+      studentPctMap.set(st._id.toString(), pct);
+    });
+
+    students.forEach((s) => {
+      const pct = studentPctMap.get(s._id.toString()) ?? 0;
+      if (pct >= 85) highAttendance += 1;
+      else if (pct >= 75) safeZone += 1;
+      else defaulters += 1;
+    });
+  }
+
+  // 4. Real Course-wise Attendance Stats
+  const subjectAgg = await Attendance.aggregate([
+    { $match: { student: { $in: studentIds }, isActive: true } },
+    {
+      $group: {
+        _id: '$subject',
+        total: { $sum: 1 },
+        present: {
+          $sum: {
+            $cond: [{ $in: ['$status', ['present', 'excused']] }, 1, 0],
+          },
+        },
+      },
+    },
+  ]);
+
+  const subjectStats = subjectAgg.map((sa) => {
+    const pct = sa.total === 0 ? 0 : Math.round((sa.present / sa.total) * 100 * 10) / 10;
+    return {
+      subject: sa._id,
+      present: sa.present,
+      total: sa.total,
+      percentage: pct,
+    };
+  });
 
   res.status(200).json({
     success: true,
-    data: { totalStudents, totalClasses, defaulters: meta.total },
+    data: {
+      totalStudents,
+      totalClasses,
+      defaulters,
+      healthDistribution: {
+        highAttendance,
+        safeZone,
+        defaulters,
+        total: totalStudents,
+      },
+      weeklyTrends,
+      subjectStats,
+    },
     meta: null,
     message: 'Dashboard stats retrieved',
   });

@@ -4,12 +4,19 @@ import { ENDPOINTS } from '../../api/endpoints';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../common/Toast';
 import Pagination from '../common/Pagination';
-import SearchInput from '../common/SearchInput';
-import Skeleton from '../common/Skeleton';
-import EmptyState from '../common/EmptyState';
-import Modal from '../common/Modal';
 import { usePagination } from '../../hooks/usePagination';
 import { useDebounce } from '../../hooks/useDebounce';
+
+const getInitials = (name = '') =>
+  name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+
+const getCategory = (pct) => {
+  if (pct < 65) return 'critical';
+  if (pct < 75) return 'borderline';
+  return 'ok';
+};
+
+const AvatarColors = ['#2563EB', '#7C3AED', '#0891B2', '#059669', '#DC2626'];
 
 const Defaulters = () => {
   const { user } = useAuth();
@@ -19,12 +26,17 @@ const Defaulters = () => {
   const [error, setError] = useState('');
   const [subject, setSubject] = useState('');
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [sending, setSending] = useState(null);
+  const [toast, setToast] = useState(null);
   const debouncedSearch = useDebounce(search, 300);
-  const [selected, setSelected] = useState([]);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [sending, setSending] = useState(false);
-  const { page, limit, total, totalPages, updateMeta, setPage, changeLimit } = usePagination(1, 20);
+  const { page, limit, total, totalPages, updateMeta, setPage } = usePagination(1, 20);
   const requestIdRef = useRef(0);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
 
   const fetchDefaulters = useCallback(async () => {
     const requestId = ++requestIdRef.current;
@@ -33,7 +45,9 @@ const Defaulters = () => {
     try {
       const { data: res } = await axiosInstance.get(ENDPOINTS.FACULTY.DEFAULTERS, {
         params: {
-          page, limit, subject: subject || undefined, search: debouncedSearch || undefined, threshold: 75,
+          page, limit, threshold: 75,
+          subject: subject || undefined,
+          search: debouncedSearch || undefined,
         },
       });
       if (requestId !== requestIdRef.current) return;
@@ -49,152 +63,242 @@ const Defaulters = () => {
 
   useEffect(() => { fetchDefaulters(); }, [fetchDefaulters]);
 
-  const toggleSelect = (email) => {
-    setSelected((prev) => (prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]));
-  };
-
-  const toggleSelectAll = () => {
-    if (selected.length === data.length) setSelected([]);
-    else setSelected(data.map((d) => d.email));
-  };
-
-  const handleSendAlerts = async () => {
-    if (selected.length === 0) return;
-    setSending(true);
+  const sendAlert = async (student) => {
+    setSending(student._id);
     try {
-      const { data: res } = await axiosInstance.post(ENDPOINTS.FACULTY.NOTIFY_DEFAULTERS, {
-        studentIds: data.filter((d) => selected.includes(d.email)).map((d) => d._id),
-        subject: subject || undefined,
-      });
-      addToast(`Sent: ${res.data.sentCount}, Failed: ${res.data.failedCount}`, res.data.failedCount > 0 ? 'warning' : 'success');
-    } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to send alerts', 'error');
+      await axiosInstance.post(ENDPOINTS.FACULTY.SEND_ALERT, { studentIds: [student._id] });
+      showToast(`Notice dispatched for ${student.name}`);
+      addToast?.(`Alert sent to ${student.name}`, 'success');
+    } catch {
+      showToast('Failed to send notice');
     } finally {
-      setSending(false);
-      setShowConfirm(false);
-      setSelected([]);
+      setSending(null);
     }
   };
 
-  const subjects = user?.subjects || [];
+  const filteredData = data.filter((s) => {
+    if (filter === 'critical') return s.percentage < 65;
+    if (filter === 'borderline') return s.percentage >= 65 && s.percentage < 75;
+    return true;
+  });
+
+  const criticalCount = data.filter((s) => s.percentage < 65).length;
+  const borderlineCount = data.filter((s) => s.percentage >= 65 && s.percentage < 75).length;
 
   return (
-    <div className="defaulters-page">
-      <div className="dashboard-home__header">
-        <h1>Defaulters</h1>
-        <p className="text-secondary">Students below 75% attendance threshold</p>
-      </div>
+    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ flex: 1, minWidth: '200px', marginBottom: 0 }}>
-            <label htmlFor="def-subject">Filter by Subject</label>
-            <select id="def-subject" value={subject} onChange={(e) => { setSubject(e.target.value); setPage(1); }}>
-              <option value="">All Subjects</option>
-              {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+      {/* Header */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', paddingBottom: '16px', borderBottom: '1px solid #F1F5F9', marginBottom: '20px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span style={{ padding: '2px 10px', borderRadius: '100px', background: '#FEE2E2', color: '#DC2626', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#DC2626', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+              Below 75% Threshold
+            </span>
+            <span style={{ fontSize: '12px', color: '#94A3B8' }}>• {user?.className || 'Your Class'}</span>
           </div>
-          <SearchInput
-            value={search}
-            onChange={(v) => { setSearch(v); setPage(1); }}
-            placeholder="Search name/email..."
-            loading={loading}
-            style={{ flex: 1 }}
-          />
+          <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.02em' }}>Attendance Defaulters</h1>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748B' }}>
+            Students with attendance below 75% threshold.
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            className="btn btn--danger"
-            disabled={selected.length === 0}
-            onClick={() => setShowConfirm(true)}
+            onClick={() => { data.forEach((s) => sendAlert(s)); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px',
+              borderRadius: '12px', background: '#2563EB', color: '#fff',
+              border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+              boxShadow: '0 1px 3px rgba(37,99,235,0.3)'
+            }}
           >
-            Send Alert ({selected.length})
+            <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>send</span>
+            Notify All
           </button>
         </div>
       </div>
 
-      {error && <div className="alert alert--error" role="alert">{error}</div>}
-
-      {loading ? (
-        <Skeleton variant="card" height="300px" />
-      ) : data.length === 0 ? (
-        <EmptyState icon="🎉" title="No defaulters" message="All students are above the 75% threshold" />
-      ) : (
-        <>
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      checked={selected.length === data.length && data.length > 0}
-                      onChange={toggleSelectAll}
-                      aria-label="Select all"
-                    />
-                  </th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Subject</th>
-                  <th>Present</th>
-                  <th>Total</th>
-                  <th>Percentage</th>
-                  <th>Needed for 75%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((d) =>
-                  (d.subjectsBelowThreshold || []).map((s, idx) => (
-                    <tr key={`${d.email}-${s.subject}`}>
-                      {idx === 0 && (
-                        <>
-                          <td rowSpan={(d.subjectsBelowThreshold || []).length}>
-                            <input
-                              type="checkbox"
-                              checked={selected.includes(d.email)}
-                              onChange={() => toggleSelect(d.email)}
-                              aria-label={`Select ${d.name}`}
-                            />
-                          </td>
-                          <td rowSpan={(d.subjectsBelowThreshold || []).length}>{d.name}</td>
-                          <td rowSpan={(d.subjectsBelowThreshold || []).length} style={{ color: 'var(--text-secondary)' }}>{d.email}</td>
-                        </>
-                      )}
-                      <td><span className="badge badge--info">{s.subject}</span></td>
-                      <td>{s.present}</td>
-                      <td>{s.total}</td>
-                      <td>
-                        <span className={`badge ${s.percentage >= 75 ? 'badge--success' : s.percentage >= 60 ? 'badge--warning' : 'badge--danger'}`}>
-                          {s.percentage}%
-                        </span>
-                      </td>
-                      <td>{s.needed}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            limit={limit}
-            onPageChange={setPage}
-            onLimitChange={changeLimit}
+      {/* Search + Filter Bar */}
+      <div style={{
+        background: '#fff', borderRadius: '16px', padding: '14px 16px', marginBottom: '20px',
+        boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid rgba(226,232,240,0.8)',
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px'
+      }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '200px', maxWidth: '360px' }}>
+          <span className="material-symbols-outlined" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '18px', color: '#94A3B8' }}>search</span>
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search student name..."
+            style={{
+              width: '100%', paddingLeft: '40px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px',
+              borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0',
+              fontSize: '13px', color: '#1E293B', outline: 'none', boxSizing: 'border-box'
+            }}
           />
-        </>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {[
+            { key: 'all', label: `All Defaulters (${total})` },
+            { key: 'critical', label: `Critical < 65% (${criticalCount})` },
+            { key: 'borderline', label: `Borderline 65–74% (${borderlineCount})` },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFilter(key)}
+              style={{
+                padding: '6px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
+                background: filter === key ? '#2563EB' : '#F1F5F9',
+                color: filter === key ? '#fff' : '#475569',
+                boxShadow: filter === key ? '0 1px 3px rgba(37,99,235,0.3)' : 'none',
+              }}
+            >{label}</button>
+          ))}
+          {user?.subjects?.length > 0 && (
+            <select
+              value={subject}
+              onChange={(e) => { setSubject(e.target.value); setPage(1); }}
+              style={{ padding: '6px 10px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '12px', background: '#fff', color: '#475569', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="">All Subjects</option>
+              {user.subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '12px', padding: '12px 16px', color: '#DC2626', marginBottom: '16px', fontSize: '13px' }}>
+          {error}
+        </div>
       )}
 
-      <Modal isOpen={showConfirm} onClose={() => setShowConfirm(false)} title="Confirm Alert">
-        <p>Send attendance warning emails to {selected.length} student(s)?</p>
-        <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-          <button type="button" className="btn btn--danger" onClick={handleSendAlerts} disabled={sending}>
-            {sending ? 'Sending...' : 'Yes, Send'}
-          </button>
-          <button type="button" className="btn btn--ghost" onClick={() => setShowConfirm(false)}>Cancel</button>
+      {/* Defaulters List */}
+      <div style={{ background: '#fff', borderRadius: '16px', boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid rgba(226,232,240,0.8)', overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ padding: '48px', textAlign: 'center', color: '#94A3B8' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}>hourglass_empty</span>
+            Loading defaulters...
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div style={{ padding: '48px', textAlign: 'center', color: '#94A3B8' }}>
+            <span style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}>🎉</span>
+            <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>No defaulters found</p>
+            <p style={{ margin: '4px 0 0', fontSize: '12px' }}>All students are above the 75% threshold</p>
+          </div>
+        ) : (
+          <div>
+            {filteredData.map((student, idx) => {
+              const pct = student.percentage ?? 0;
+              const category = getCategory(pct);
+              const isCritical = category === 'critical';
+              const avatarBg = AvatarColors[idx % AvatarColors.length];
+
+              return (
+                <div
+                  key={student._id}
+                  style={{
+                    padding: '16px 20px', borderBottom: idx < filteredData.length - 1 ? '1px solid #F1F5F9' : 'none',
+                    display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+                    background: isCritical ? 'rgba(254,242,242,0.4)' : 'transparent',
+                    transition: 'background 0.15s'
+                  }}
+                >
+                  {/* Avatar + Name */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: '220px' }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '12px',
+                      background: isCritical ? '#FEE2E2' : '#EFF6FF',
+                      color: isCritical ? '#DC2626' : avatarBg,
+                      fontWeight: 700, fontSize: '14px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    }}>
+                      {getInitials(student.name)}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, color: '#1E293B', fontSize: '14px' }}>{student.name}</span>
+                        <span style={{ padding: '1px 7px', borderRadius: '5px', background: '#F1F5F9', color: '#475569', fontSize: '11px', fontWeight: 600 }}>
+                          {student.email?.split('@')[0] || '—'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#94A3B8' }}>
+                        {student.branch || user?.branch} • {student.className || user?.className}
+                        {student.section ? ` - ${student.section}` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div style={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
+                      <span style={{ fontWeight: 700, color: isCritical ? '#DC2626' : '#F59E0B' }}>{pct.toFixed(1)}%</span>
+                      <span style={{ color: '#64748B', fontWeight: 500 }}>{student.presentClasses} / {student.totalClasses} classes</span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', borderRadius: '100px', background: '#F1F5F9', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', borderRadius: '100px',
+                        width: `${Math.min(pct, 100)}%`,
+                        background: isCritical ? '#EF4444' : '#F59E0B',
+                        transition: 'width 0.5s ease'
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Badge + Action */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{
+                      padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700,
+                      background: isCritical ? '#FEE2E2' : '#FEF3C7',
+                      color: isCritical ? '#DC2626' : '#92400E',
+                      display: 'inline-flex', alignItems: 'center', gap: '4px'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>warning</span>
+                      {isCritical ? 'Critical' : 'Borderline'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => sendAlert(student)}
+                      disabled={sending === student._id}
+                      style={{
+                        padding: '6px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                        fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
+                        background: isCritical ? '#EF4444' : '#F1F5F9',
+                        color: isCritical ? '#fff' : '#475569',
+                        opacity: sending === student._id ? 0.6 : 1
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>mail</span>
+                      {sending === student._id ? 'Sending...' : 'Send Notice'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: '16px' }}>
+        <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+      </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000,
+          background: '#0F172A', color: '#fff', padding: '12px 16px', borderRadius: '16px',
+          boxShadow: '0 8px 24px rgba(15,23,42,0.2)', display: 'flex', alignItems: 'center', gap: '10px',
+          fontSize: '13px', fontWeight: 500, animation: 'slideIn 0.2s ease'
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#10B981' }}>check_circle</span>
+          {toast}
         </div>
-      </Modal>
+      )}
     </div>
   );
 };

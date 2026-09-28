@@ -8,8 +8,8 @@ import catchAsync from '../utils/catchAsync.js';
 import logger from '../config/logger.js';
 import { sendPasswordResetEmail } from '../services/emailService.js';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'attendiq_jwt_super_secret_key_2026_dev_environment_min_32_chars';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'attendiq_jwt_refresh_secret_key_2026_dev_environment_min_32_chars';
 const JWT_EXPIRE = process.env.JWT_EXPIRE || '15m';
 const JWT_REFRESH_EXPIRE = process.env.JWT_REFRESH_EXPIRE || '7d';
 
@@ -245,6 +245,59 @@ export const getMe = catchAsync(async (req, res) => {
     },
     meta: null,
     message: 'Current user fetched',
+  });
+});
+
+export const updateProfileValidations = [
+  body('name').optional().trim().notEmpty().withMessage('Name cannot be empty').isLength({ max: 100 }),
+  body('section').optional().trim().isLength({ max: 10 }),
+  body('className').optional().trim().notEmpty(),
+  body('branch').optional().trim().notEmpty(),
+  body('subjects').optional().isArray(),
+];
+
+export const updateProfile = catchAsync(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({
+      success: false,
+      data: null,
+      meta: null,
+      message: 'Validation failed',
+      errorCode: 'VALIDATION_ERROR',
+      errors: errors.array(),
+    });
+  }
+
+  const { name, section, className, branch, subjects } = req.body;
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (section !== undefined) updates.section = section;
+  if (className !== undefined) updates.className = className;
+  if (branch !== undefined) updates.branch = branch;
+  if (subjects !== undefined) updates.subjects = subjects;
+
+  const user = await User.findByIdAndUpdate(req.user._id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        branch: user.branch,
+        className: user.className,
+        section: user.section,
+        subjects: user.subjects,
+      },
+    },
+    meta: null,
+    message: 'Profile updated successfully',
   });
 });
 
