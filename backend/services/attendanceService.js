@@ -13,9 +13,14 @@ const IDEMPOTENCY_TTL = 24 * 60 * 60 * 1000;
 // path all callers go through — keeps that uniqueness guarantee real instead
 // of letting same-day records slip past it with mismatched timestamps.
 const normalizeDate = (date) => {
+  if (typeof date === 'string') {
+    const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return new Date(Date.UTC(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10)));
+    }
+  }
   const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 };
 
 export const checkIdempotency = (key) => {

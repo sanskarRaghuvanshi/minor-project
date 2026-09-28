@@ -40,15 +40,47 @@ const connectDB = async (retries = 10, delay = 10000) => {
         // Index didn't exist or already dropped
       }
 
-      // Backfill any legacy attendance documents missing slotNumber
+      // Fix any attendance records created today that were stored with non-UTC local offset (e.g. Sunday shift)
       try {
         const { default: Attendance } = await import('../models/Attendance.js');
-        await Attendance.updateMany(
-          { $or: [{ slotNumber: { $exists: false } }, { slotNumber: null }] },
-          { $set: { slotNumber: 1, timeSlot: '09:45 - 10:35' } }
-        );
-        logger.info('Backfilled legacy attendance slotNumbers');
-      } catch (bfErr) {
+        const allRecords = await Attendance.find({}).lean();
+        for (const r of allRecords) {
+          if (r.date) {
+            const dateStr = new Date(r.date).toISOString().split('T')[0];
+            // If hours/minutes are non-zero or stored in non-UTC midnight format, normalize to UTC midnight
+            const utcMidnight = new Date(`${dateStr}T00:00:00.000Z`);
+            if (new Date(r.date).getTime() !== utcMidnight.getTime()) {
+              await Attendance.updateOne({ _id: r._id }, { $set: { date: utcMidnight } });
+            }
+          }
+        }
+        logger.info('Normalized attendance record dates to UTC midnight');
+      } catch (normErr) {
+        // Ignored
+      }
+
+      // Deduplicate any test records having identical (student, date, slotNumber)
+      try {
+        const { default: Attendance } = await import('../models/Attendance.js');
+        const duplicates = await Attendance.aggregate([
+          {
+            $group: {
+              _id: { student: '$student', date: '$date', slotNumber: '$slotNumber' },
+              dups: { $push: '$_id' },
+              count: { $sum: 1 },
+            },
+          },
+          { $match: { count: { $gt: 1 } } },
+        ]);
+
+        for (const doc of duplicates) {
+          const idsToDelete = doc.dups.slice(1);
+          await Attendance.deleteMany({ _id: { $in: idsToDelete } });
+        }
+        if (duplicates.length > 0) {
+          logger.info(`Deduplicated ${duplicates.length} duplicate attendance test key(s)`);
+        }
+      } catch (dedupErr) {
         // Ignored
       }
 
