@@ -30,6 +30,37 @@ const connectDB = async (retries = 10, delay = 10000) => {
         : maskCredentials(uri);
 
       logger.info(`MongoDB connected: ${display}`);
+
+      // Drop obsolete legacy unique index student_1_subject_1_date_1 if present in MongoDB
+      try {
+        const { default: Attendance } = await import('../models/Attendance.js');
+        await Attendance.collection.dropIndex('student_1_subject_1_date_1');
+        logger.info('Dropped obsolete index: student_1_subject_1_date_1');
+      } catch (idxErr) {
+        // Index didn't exist or already dropped
+      }
+
+      // Backfill any legacy attendance documents missing slotNumber
+      try {
+        const { default: Attendance } = await import('../models/Attendance.js');
+        await Attendance.updateMany(
+          { $or: [{ slotNumber: { $exists: false } }, { slotNumber: null }] },
+          { $set: { slotNumber: 1, timeSlot: '09:45 - 10:35' } }
+        );
+        logger.info('Backfilled legacy attendance slotNumbers');
+      } catch (bfErr) {
+        // Ignored
+      }
+
+      // Sync indexes to ensure { student: 1, date: 1, slotNumber: 1 } is the active unique key
+      try {
+        const { default: Attendance } = await import('../models/Attendance.js');
+        await Attendance.syncIndexes();
+        logger.info('Attendance indexes synced successfully');
+      } catch (syncErr) {
+        logger.warn({ error: syncErr.message }, 'Attendance syncIndexes warning');
+      }
+
       return conn;
     } catch (err) {
       logger.error('MongoDB connection failed', { attempt, error: err.message });
