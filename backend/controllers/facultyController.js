@@ -370,7 +370,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
   ]);
   const totalClasses = classCount[0]?.count || 0;
 
-  // 2. Real Weekly Trends (last distinct session dates for this cohort)
+  // 2. Real Weekly Trends (last 7 distinct session dates for this cohort, sorted chronologically)
   const recentDates = await Attendance.aggregate([
     { $match: { student: { $in: studentIds }, isActive: true } },
     {
@@ -384,12 +384,16 @@ export const getDashboardStats = catchAsync(async (req, res) => {
         },
       },
     },
-    { $sort: { _id: 1 } },
+    { $sort: { _id: -1 } },
     { $limit: 7 },
   ]);
 
-  const weeklyTrends = recentDates.map((d) => {
-    const dateObj = new Date(d._id);
+  // Reverse so older dates appear left, latest date appears right
+  const sortedDates = recentDates.reverse();
+
+  const weeklyTrends = sortedDates.map((d) => {
+    // Append T00:00:00 to prevent UTC timezone rollback to previous day (e.g. Monday -> Sunday)
+    const dateObj = new Date(`${d._id}T00:00:00`);
     const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
     const percentage = d.total === 0 ? 0 : Math.round((d.present / d.total) * 100);
     return {

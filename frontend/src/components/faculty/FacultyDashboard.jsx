@@ -250,9 +250,14 @@ const FacultyDashboard = () => {
 
                   {/* Day Labels */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 4px 0', fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
-                    {weeklyData.map((d) => (
-                      <span key={d.date || d.day} style={{ flex: 1, textAlign: 'center' }}>{d.day}</span>
-                    ))}
+                    {weeklyData.map((d, idx) => {
+                      const displayDay = d.date
+                        ? new Date(`${d.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })
+                        : d.day;
+                      return (
+                        <span key={d.date || idx} style={{ flex: 1, textAlign: 'center' }}>{displayDay}</span>
+                      );
+                    })}
                   </div>
                 </>
               )}

@@ -19,7 +19,7 @@ const MarkAttendance = () => {
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [subject, setSubject] = useState('');
-  const [selectedSlot, setSelectedSlot] = useState(LECTURE_SLOTS[0]?.id || 'slot-1');
+  const [selectedSlots, setSelectedSlots] = useState([1]);
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
   const [loading, setLoading] = useState(false);
@@ -33,7 +33,15 @@ const MarkAttendance = () => {
   const prevState = useRef(attendance);
   const subjects = user?.subjects || [];
 
-  const currentSlotObj = LECTURE_SLOTS.find((s) => s.id === selectedSlot) || LECTURE_SLOTS[0];
+  const toggleSlotSelection = (slotNum) => {
+    setSelectedSlots((prev) => {
+      if (prev.includes(slotNum)) {
+        if (prev.length === 1) return prev; // Keep at least one period selected
+        return prev.filter((s) => s !== slotNum).sort((a, b) => a - b);
+      }
+      return [...prev, slotNum].sort((a, b) => a - b);
+    });
+  };
 
   const fetchStudents = useCallback(async () => {
     if (!subject) return;
@@ -46,10 +54,11 @@ const MarkAttendance = () => {
       const fetched = data.data || [];
       setStudents(fetched);
 
-      // Check if attendance already exists for this date/subject/slot
+      // Check if attendance already exists for this date/subject/first selected slot
+      const primarySlot = selectedSlots[0] || 1;
       const existing = await axiosInstance
         .get(ENDPOINTS.FACULTY.ATTENDANCE_BY_DATE_SUBJECT(date, subject), {
-          params: { slotNumber: currentSlotObj.slotNumber },
+          params: { slotNumber: primarySlot },
         })
         .catch(() => null);
 
@@ -71,7 +80,7 @@ const MarkAttendance = () => {
     } finally {
       setLoading(false);
     }
-  }, [subject, date, currentSlotObj.slotNumber, user?.branch, user?.className]);
+  }, [subject, date, selectedSlots, user?.branch, user?.className]);
 
   useEffect(() => {
     if (subjects.length > 0 && !subject) {
@@ -133,20 +142,30 @@ const MarkAttendance = () => {
         .filter(([, status]) => status)
         .map(([studentId, status]) => ({ studentId, status }));
 
-      await axiosInstance.post(
-        ENDPOINTS.FACULTY.ATTENDANCE,
-        {
-          date,
-          subject,
-          slotNumber: currentSlotObj.slotNumber,
-          timeSlot: currentSlotObj.timeRange,
-          room: currentSlotObj.room || 'B05',
-          records,
-        },
-        { headers: { 'Idempotency-Key': crypto.randomUUID() } }
-      );
+      // Loop over each selected period slot and post attendance for each
+      const requests = selectedSlots.map((slotNum) => {
+        const slotObj = LECTURE_SLOTS.find((s) => s.slotNumber === slotNum) || LECTURE_SLOTS[0];
+        return axiosInstance.post(
+          ENDPOINTS.FACULTY.ATTENDANCE,
+          {
+            date,
+            subject,
+            slotNumber: slotObj.slotNumber,
+            timeSlot: slotObj.timeRange,
+            room: slotObj.room || 'B05',
+            records,
+          },
+          { headers: { 'Idempotency-Key': crypto.randomUUID() } }
+        );
+      });
 
-      addToast?.(`Period ${currentSlotObj.slotNumber} (${currentSlotObj.timeRange}) attendance saved successfully!`, 'success');
+      await Promise.all(requests);
+
+      const periodLabel = selectedSlots.length > 1
+        ? `Periods ${selectedSlots.join(' & ')}`
+        : `Period ${selectedSlots[0]}`;
+
+      addToast?.(`${periodLabel} attendance saved successfully (${selectedSlots.length} periods marked simultaneously)!`, 'success');
       setHasChanges(false);
       setShowFeedback(true);
     } catch (err) {
@@ -236,23 +255,48 @@ const MarkAttendance = () => {
             </div>
           </div>
 
-          {/* Time Slot Picker */}
-          <div style={{ background: '#F8FAFC', borderRadius: '14px', padding: '10px 14px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-symbols-outlined" style={{ color: '#2563EB', fontSize: '22px' }}>schedule</span>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="mark-att-slot" style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.04em' }}>Time Slot / Period</label>
-              <select
-                id="mark-att-slot"
-                value={selectedSlot}
-                onChange={(e) => setSelectedSlot(e.target.value)}
-                style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, color: '#0F172A', width: '100%', cursor: 'pointer' }}
-              >
-                {LECTURE_SLOTS.map((slot) => (
-                  <option key={slot.id} value={slot.id}>
-                    Period {slot.slotNumber} ({slot.timeRange})
-                  </option>
-                ))}
-              </select>
+          {/* Multi-Select Time Slot / Period Picker */}
+          <div style={{ gridColumn: 'span 2', background: '#F8FAFC', borderRadius: '14px', padding: '12px 14px', border: '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <label style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="material-symbols-outlined" style={{ color: '#2563EB', fontSize: '16px' }}>schedule</span>
+                Select Lecture Period(s) — Click to Combine Multiple (e.g. Period 1 & 2)
+              </label>
+              {selectedSlots.length > 1 && (
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803D', background: '#DCFCE7', padding: '2px 8px', borderRadius: '6px' }}>
+                  {selectedSlots.length} Periods Combined
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {LECTURE_SLOTS.map((slot) => {
+                const isSelected = selectedSlots.includes(slot.slotNumber);
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => toggleSlotSelection(slot.slotNumber)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: isSelected ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                      background: isSelected ? '#2563EB' : '#fff',
+                      color: isSelected ? '#fff' : '#475569',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {isSelected && <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>check_circle</span>}
+                    P{slot.slotNumber} ({slot.timeRange})
+                  </button>
+                );
+              })}
             </div>
           </div>
 
