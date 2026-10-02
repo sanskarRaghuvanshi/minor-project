@@ -67,6 +67,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const { data } = await axiosInstance.post(ENDPOINTS.AUTH.REGISTER, payload);
+      if (data.data?.pendingApproval) {
+        return { pendingApproval: true, user: data.data.user, message: data.message };
+      }
       const { token, refreshToken, user: userData } = data.data;
       localStorage.setItem('token', token);
       localStorage.setItem('refreshToken', refreshToken);

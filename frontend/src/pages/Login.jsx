@@ -7,7 +7,7 @@ import Logo from '../components/common/Logo';
 const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [errorObj, setErrorObj] = useState(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -16,17 +16,17 @@ const Login = () => {
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    setError('');
+    setErrorObj(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.email || !form.password) {
-      setError('Email and password are required');
+      setErrorObj({ message: 'Email and password are required' });
       return;
     }
     setLoading(true);
-    setError('');
+    setErrorObj(null);
     try {
       const user = await login(form.email, form.password);
       const dest = user.role === 'faculty'
@@ -38,7 +38,9 @@ const Login = () => {
             : '/admin/dashboard';
       navigate(from === '/' || from === '/login' || from === '/register' ? dest : from, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      const errorCode = err.response?.data?.errorCode;
+      const message = err.response?.data?.message || 'Login failed. Please try again.';
+      setErrorObj({ message, errorCode });
     } finally {
       setLoading(false);
     }
@@ -53,7 +55,65 @@ const Login = () => {
           <p>Sign in to your account</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
-          {error && <div className="alert alert--error" role="alert">{error}</div>}
+          {errorObj && errorObj.errorCode === 'PENDING_APPROVAL' ? (
+            <div
+              style={{
+                background: '#FEF3C7',
+                border: '1px solid #FCD34D',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                marginBottom: '16px',
+                color: '#92400E',
+                fontSize: '0.875rem',
+                lineHeight: 1.45,
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'flex-start',
+              }}
+              role="alert"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', flexShrink: 0, color: '#D97706' }}>
+                hourglass_top
+              </span>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '2px', color: '#78350F' }}>
+                  Account Pending Approval
+                </strong>
+                {errorObj.message}
+              </div>
+            </div>
+          ) : errorObj && errorObj.errorCode === 'REJECTED_APPROVAL' ? (
+            <div
+              style={{
+                background: '#FEE2E2',
+                border: '1px solid #FCA5A5',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                marginBottom: '16px',
+                color: '#991B1B',
+                fontSize: '0.875rem',
+                lineHeight: 1.45,
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'flex-start',
+              }}
+              role="alert"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', flexShrink: 0, color: '#DC2626' }}>
+                cancel
+              </span>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '2px', color: '#7F1D1D' }}>
+                  Registration Rejected
+                </strong>
+                {errorObj.message}
+              </div>
+            </div>
+          ) : errorObj?.message ? (
+            <div className="alert alert--error" role="alert">
+              {errorObj.message}
+            </div>
+          ) : null}
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <div className="input-icon">

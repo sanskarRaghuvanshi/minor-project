@@ -96,6 +96,8 @@ export const register = catchAsync(async (req, res) => {
 
   await validateBranchClassSubjects(branch, className, section, subjects, role);
 
+  const isSelfApproved = role === 'admin';
+
   const user = await User.create({
     name,
     email,
@@ -105,11 +107,35 @@ export const register = catchAsync(async (req, res) => {
     className,
     section: role === 'admin' ? '' : section,
     subjects: ['faculty', 'coordinator'].includes(role) ? subjects || [] : [],
+    approvalStatus: isSelfApproved ? 'approved' : 'pending',
+    isActive: isSelfApproved,
   });
 
-  const tokens = generateTokens(user._id);
+  logger.info({ userId: user._id, role, email, approvalStatus: user.approvalStatus }, 'User registered');
 
-  logger.info({ userId: user._id, role, email }, 'User registered');
+  // If user requires admin verification and approval (student, faculty, coordinator)
+  if (!isSelfApproved) {
+    return res.status(201).json({
+      success: true,
+      data: {
+        pendingApproval: true,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          branch: user.branch,
+          className: user.className,
+          section: user.section,
+          approvalStatus: user.approvalStatus,
+        },
+      },
+      meta: null,
+      message: 'Registration submitted successfully! Your account is pending administrator approval before you can log in.',
+    });
+  }
+
+  const tokens = generateTokens(user._id);
 
   res.status(201).json({
     success: true,
@@ -155,6 +181,28 @@ export const login = catchAsync(async (req, res) => {
   const isMatch = await user.comparePassword(password);
   if (!isMatch) {
     throw new ApiError('Invalid credentials', 401, 'UNAUTHORIZED');
+  }
+
+  // Security Verification: Check admin approval status
+  if (user.approvalStatus === 'pending') {
+    throw new ApiError(
+      'Your account registration is pending admin approval. Please wait for an administrator to verify and activate your account.',
+      403,
+      'PENDING_APPROVAL'
+    );
+  }
+
+  if (user.approvalStatus === 'rejected') {
+    const reasonText = user.rejectionReason ? ` Reason: ${user.rejectionReason}` : '';
+    throw new ApiError(
+      `Your account registration was rejected by the administrator.${reasonText}`,
+      403,
+      'REJECTED_APPROVAL'
+    );
+  }
+
+  if (!user.isActive) {
+    throw new ApiError('Your account has been deactivated by an administrator.', 403, 'ACCOUNT_DEACTIVATED');
   }
 
   user.lastLogin = new Date();

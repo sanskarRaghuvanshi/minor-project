@@ -84,6 +84,18 @@ const connectDB = async (retries = 10, delay = 10000) => {
         // Ignored
       }
 
+      // Backfill any legacy users missing approvalStatus
+      try {
+        const { default: User } = await import('../models/User.js');
+        await User.updateMany(
+          { $or: [{ approvalStatus: { $exists: false } }, { approvalStatus: null }] },
+          { $set: { approvalStatus: 'approved' } }
+        );
+        logger.info('Backfilled legacy users approvalStatus to approved');
+      } catch (userBfErr) {
+        // Ignored
+      }
+
       // Sync indexes to ensure { student: 1, date: 1, slotNumber: 1 } is the active unique key
       try {
         const { default: Attendance } = await import('../models/Attendance.js');

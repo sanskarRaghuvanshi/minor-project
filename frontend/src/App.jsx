@@ -33,12 +33,12 @@ const CoordinatorTeachers = lazy(() => import('./components/coordinator/Coordina
 const CoordinatorStudents = lazy(() => import('./components/coordinator/CoordinatorStudents'));
 const CoordinatorFeedback = lazy(() => import('./components/coordinator/CoordinatorFeedback'));
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
+const AdminApprovals = lazy(() => import('./components/admin/AdminApprovals'));
 const UserManagement = lazy(() => import('./components/admin/UserManagement'));
 const AdminDefaulters = lazy(() => import('./components/admin/AdminDefaulters'));
 const QrGenerator = lazy(() => import('./components/faculty/QrGenerator'));
 const QrSessionView = lazy(() => import('./components/faculty/QrSessionView'));
 const FacultySettings = lazy(() => import('./components/faculty/FacultySettings'));
-const StudentSettings = lazy(() => import('./components/student/StudentSettings'));
 const ScanAttendancePage = lazy(() => import('./pages/ScanAttendancePage'));
 
 const Loading = () => <div className="page-loading"><Skeleton variant="card" height="400px" /></div>;
@@ -94,7 +94,6 @@ const App = () => (
                   <Route path="apply-leave" element={<ApplyLeave />} />
                   <Route path="my-leaves" element={<MyLeaves />} />
                   <Route path="scan" element={<ScanAttendancePage />} />
-                  <Route path="settings" element={<StudentSettings />} />
                 </Route>
 
                 <Route
@@ -128,6 +127,7 @@ const App = () => (
                 >
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="approvals" element={<AdminApprovals />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="defaulters" element={<AdminDefaulters />} />
                 </Route>

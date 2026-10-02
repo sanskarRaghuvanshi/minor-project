@@ -43,6 +43,14 @@ const userSchema = new Schema(
     subjects: [{ type: String }],
     avatar: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'approved',
+    },
+    approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date },
+    rejectionReason: { type: String, default: '' },
     lastLogin: { type: Date },
     passwordResetToken: String,
     passwordResetExpires: Date,
@@ -54,6 +62,7 @@ const userSchema = new Schema(
 
 userSchema.index({ branch: 1, className: 1, section: 1, role: 1 });
 userSchema.index({ role: 1, isActive: 1 });
+userSchema.index({ approvalStatus: 1, role: 1 });
 
 userSchema.pre('save', async function hashPassword(next) {
   if (!this.isModified('password')) {
