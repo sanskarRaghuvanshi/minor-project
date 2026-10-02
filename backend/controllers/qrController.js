@@ -29,13 +29,16 @@ export const generateQr = catchAsync(async (req, res) => {
     });
   }
 
-  const { subject, date } = req.body;
+  const { subject, date, slotNumber = 1, timeSlot = '09:45 - 10:35', room = 'B05' } = req.body;
   const faculty = req.user;
 
   const session = await createQrSession({
     facultyId: faculty._id,
     subject,
     date,
+    slotNumber: Number(slotNumber) || 1,
+    timeSlot,
+    room,
     branch: faculty.branch,
     className: faculty.className,
     section: faculty.section,
@@ -45,6 +48,8 @@ export const generateQr = catchAsync(async (req, res) => {
     sessionToken: session.sessionToken,
     subject: session.subject,
     date: session.date,
+    slotNumber: session.slotNumber,
+    timeSlot: session.timeSlot,
   });
 
   const qrDataUrl = await QRCode.toDataURL(qrData, {
@@ -56,7 +61,7 @@ export const generateQr = catchAsync(async (req, res) => {
     },
   });
 
-  logger.info({ sessionToken: session.sessionToken, facultyId: faculty._id }, 'QR code generated');
+  logger.info({ sessionToken: session.sessionToken, facultyId: faculty._id, slotNumber: session.slotNumber }, 'QR code generated');
 
   res.status(201).json({
     success: true,
@@ -67,6 +72,9 @@ export const generateQr = catchAsync(async (req, res) => {
         sessionToken: session.sessionToken,
         subject: session.subject,
         date: session.date,
+        slotNumber: session.slotNumber,
+        timeSlot: session.timeSlot,
+        room: session.room,
         expiresAt: session.expiresAt,
         branch: session.branch,
         className: session.className,

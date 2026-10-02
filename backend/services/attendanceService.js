@@ -40,7 +40,19 @@ export const setIdempotencyCache = (key, response) => {
   idempotencyCache.set(key, { response, timestamp: Date.now() });
 };
 
-export const bulkUpsertAttendance = async ({ records, date, subject, slotNumber = 1, timeSlot = '09:45 - 10:35', room = 'B05', markedBy, ipAddress, userAgent }) => {
+export const bulkUpsertAttendance = async ({
+  records,
+  date,
+  subject,
+  slotNumber = 1,
+  timeSlot = '09:45 - 10:35',
+  room = 'B05',
+  markedBy,
+  source = 'manual',
+  qrSession = null,
+  ipAddress,
+  userAgent,
+}) => {
   const results = [];
   const errors = [];
   const normalizedDate = normalizeDate(date);
@@ -61,19 +73,26 @@ export const bulkUpsertAttendance = async ({ records, date, subject, slotNumber 
         slotNumber: parsedSlotNumber,
       });
 
+      const updatePayload = {
+        student: studentId,
+        subject,
+        date: normalizedDate,
+        slotNumber: parsedSlotNumber,
+        timeSlot,
+        room,
+        status,
+        markedBy,
+        source: source || 'manual',
+        isActive: true,
+      };
+
+      if (qrSession) {
+        updatePayload.qrSession = qrSession;
+      }
+
       const result = await Attendance.findOneAndUpdate(
         { student: studentId, date: normalizedDate, slotNumber: parsedSlotNumber },
-        {
-          student: studentId,
-          subject,
-          date: normalizedDate,
-          slotNumber: parsedSlotNumber,
-          timeSlot,
-          room,
-          status,
-          markedBy,
-          isActive: true,
-        },
+        updatePayload,
         { upsert: true, new: true, runValidators: true },
       );
 

@@ -52,11 +52,15 @@ const QrGenerator = () => {
       return;
     }
 
+    const slotObj = LECTURE_SLOTS.find((s) => s.id === selectedSlot) || LECTURE_SLOTS[0];
+
     setLoading(true);
     try {
       const { data } = await axiosInstance.post(ENDPOINTS.FACULTY.QR_GENERATE, {
         subject,
         date,
+        slotNumber: slotObj?.slotNumber || 1,
+        timeSlot: slotObj?.timeRange || '09:45 - 10:35',
       });
 
       setSessionData(data.data);
