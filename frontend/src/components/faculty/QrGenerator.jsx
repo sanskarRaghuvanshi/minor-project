@@ -129,6 +129,9 @@ const QrGenerator = () => {
         timeSlot: slotObj?.timeRange || '09:45 - 10:35',
         room: effectiveRoom,
         radius: 50, // 50m classroom radius
+        branch: activeClass.branch || user?.branch,
+        className: activeClass.className || user?.className,
+        section: activeClass.section !== undefined ? activeClass.section : user?.section,
       };
 
       if (geoEnabled && location?.lat != null && location?.lng != null) {
@@ -885,6 +888,30 @@ const QrGenerator = () => {
                   </span>
                   <strong style={{ color: '#0F172A', fontSize: '13px' }}>
                     {sessionData.session?.room || room}
+                  </strong>
+                </div>
+                <div
+                  style={{
+                    background: '#fff',
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid #F1F5F9',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: '#94A3B8',
+                      display: 'block',
+                      fontSize: '10px',
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Target Class
+                  </span>
+                  <strong style={{ color: '#2563EB', fontSize: '13px' }}>
+                    {sessionData.session?.className || activeClass.className}
+                    {sessionData.session?.section ? ` (${sessionData.session.section})` : activeClass.section ? ` (${activeClass.section})` : ''}
                   </strong>
                 </div>
                 <div

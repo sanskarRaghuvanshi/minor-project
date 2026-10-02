@@ -99,12 +99,20 @@ export const scanAndMarkAttendance = async (
     throw new ApiError('Only students can scan attendance', 403, 'FORBIDDEN');
   }
 
-  if (
-    student.branch !== session.branch ||
-    student.className !== session.className ||
-    (session.section && student.section !== session.section)
-  ) {
-    throw new ApiError('Student is not enrolled in this class section', 403, 'FORBIDDEN');
+  const normalize = (str) => (str || '').toString().trim().toLowerCase();
+
+  const branchMatch = !session.branch || normalize(student.branch) === normalize(session.branch);
+  const classMatch = !session.className || normalize(student.className) === normalize(session.className);
+  const sectionMatch = !session.section || normalize(student.section) === normalize(session.section);
+
+  if (!branchMatch || !classMatch || !sectionMatch) {
+    const studentClass = `${student.branch || ''} ${student.className || ''} ${student.section ? `(${student.section})` : ''}`.trim();
+    const targetClass = `${session.branch || ''} ${session.className || ''} ${session.section ? `(${session.section})` : ''}`.trim();
+    throw new ApiError(
+      `Class mismatch: This QR session is for [${targetClass}], but your registered class is [${studentClass}].`,
+      403,
+      'FORBIDDEN',
+    );
   }
 
   // Geo-fencing verification check

@@ -38,6 +38,9 @@ export const generateQr = catchAsync(async (req, res) => {
     lat = null,
     lng = null,
     radius = 50,
+    branch,
+    className,
+    section,
   } = req.body;
   const faculty = req.user;
 
@@ -51,9 +54,9 @@ export const generateQr = catchAsync(async (req, res) => {
     lat: lat !== undefined && lat !== null ? Number(lat) : null,
     lng: lng !== undefined && lng !== null ? Number(lng) : null,
     radius: Number(radius) || 50,
-    branch: faculty.branch,
-    className: faculty.className,
-    section: faculty.section,
+    branch: branch || faculty.branch,
+    className: className || faculty.className,
+    section: section !== undefined ? section : faculty.section,
   });
 
   const qrData = JSON.stringify({
