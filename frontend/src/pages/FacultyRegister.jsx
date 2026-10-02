@@ -9,6 +9,7 @@ const FacultyRegister = () => {
   const [form, setForm] = useState({
     name: '', email: '', password: '', role: 'faculty',
     branch: '', className: '', section: '', subjects: [],
+    assignedClasses: [],
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -23,22 +24,38 @@ const FacultyRegister = () => {
   };
 
   const handleRoleChange = (role) => {
-    setForm((prev) => ({ ...prev, role, subjects: [] }));
+    setForm((prev) => ({ ...prev, role, subjects: [], assignedClasses: [] }));
     setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password || !form.branch || !form.className || !form.section) {
-      setError('All required fields must be filled');
+    if (!form.name || !form.email || !form.password) {
+      setError('Name, email and password are required');
+      return;
+    }
+    if (form.role === 'faculty' && form.assignedClasses.length === 0) {
+      setError('Please add at least one class to your teaching schedule');
+      return;
+    }
+    if (form.role === 'coordinator' && (!form.branch || !form.className || !form.section)) {
+      setError('Branch, class and section are required for coordinators');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const result = await register(form);
+      // For faculty, derive primary class from first assigned class
+      const payload = { ...form };
+      if (form.role === 'faculty' && form.assignedClasses.length > 0) {
+        const primary = form.assignedClasses[0];
+        payload.branch = primary.branch;
+        payload.className = primary.className;
+        payload.section = primary.section;
+      }
+      const result = await register(payload);
       if (result?.pendingApproval) {
-        setSubmittedUser(result.user || form);
+        setSubmittedUser(result.user || payload);
       } else {
         const dest = form.role === 'coordinator' ? '/coordinator/dashboard' : '/faculty/dashboard';
         navigate(dest, { replace: true });
@@ -278,10 +295,12 @@ const FacultyRegister = () => {
             selectedClass={form.className}
             selectedSection={form.section}
             selectedSubjects={form.subjects}
+            assignedClasses={form.assignedClasses}
             onBranchChange={(v) => setForm((prev) => ({ ...prev, branch: v }))}
             onClassChange={(v) => setForm((prev) => ({ ...prev, className: v }))}
             onSectionChange={(v) => setForm((prev) => ({ ...prev, section: v }))}
             onSubjectsChange={(v) => setForm((prev) => ({ ...prev, subjects: v }))}
+            onAssignedClassesChange={(classes) => setForm((prev) => ({ ...prev, assignedClasses: classes }))}
           />
           <button type="submit" className="btn btn--primary btn--full" disabled={loading}>
             {loading ? 'Registering...' : form.role === 'coordinator' ? 'Register Coordinator Account' : 'Register Faculty Account'}

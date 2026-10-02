@@ -30,10 +30,11 @@ export const registerValidations = [
     .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
     .withMessage('Password must contain at least one letter and one number'),
   body('role').isIn(['student', 'faculty', 'coordinator', 'admin']).withMessage('Invalid role'),
-  body('branch').trim().notEmpty().withMessage('Branch is required'),
-  body('className').trim().notEmpty().withMessage('Class is required'),
+  body('branch').optional().trim(),
+  body('className').optional().trim(),
   body('section').optional().trim().isLength({ max: 10 }).withMessage('Section must be at most 10 characters'),
   body('subjects').optional().isArray().withMessage('Subjects must be an array'),
+  body('assignedClasses').optional().isArray().withMessage('assignedClasses must be an array'),
 ];
 
 export const loginValidations = [
@@ -44,6 +45,10 @@ export const loginValidations = [
 export const refreshValidations = [body('refreshToken').notEmpty().withMessage('Refresh token is required')];
 
 const validateBranchClassSubjects = async (branchName, className, section, subjects = [], role) => {
+  if (!branchName || !className) {
+    throw new ApiError('Branch and Class are required', 400, 'VALIDATION_ERROR');
+  }
+
   const branch = await Branch.findOne({ name: branchName, isActive: true });
   if (!branch) {
     throw new ApiError('Branch not found or inactive', 400, 'VALIDATION_ERROR');
@@ -83,7 +88,7 @@ export const register = catchAsync(async (req, res) => {
     });
   }
 
-  const { name, email, password, role, branch, className, section, subjects } = req.body;
+  const { name, email, password, role, branch, className, section, subjects, assignedClasses } = req.body;
 
   if (role === 'admin') {
     throw new ApiError('Admin accounts cannot be self-registered', 403, 'FORBIDDEN');
@@ -94,7 +99,36 @@ export const register = catchAsync(async (req, res) => {
     throw new ApiError('Email already registered', 409, 'DUPLICATE_ERROR');
   }
 
-  await validateBranchClassSubjects(branch, className, section, subjects, role);
+  let finalAssignedClasses = [];
+  if (Array.isArray(assignedClasses) && assignedClasses.length > 0) {
+    finalAssignedClasses = assignedClasses.map((ac) => ({
+      branch: ac.branch,
+      className: ac.className,
+      section: ac.section || '',
+      subjects: Array.isArray(ac.subjects) ? ac.subjects : [],
+    }));
+  }
+
+  const primaryBranch = branch || finalAssignedClasses[0]?.branch;
+  const primaryClass = className || finalAssignedClasses[0]?.className;
+  const primarySection = section || finalAssignedClasses[0]?.section || '';
+
+  if (!primaryBranch || !primaryClass) {
+    throw new ApiError('At least one class (Branch and Class) is required', 400, 'VALIDATION_ERROR');
+  }
+
+  if (finalAssignedClasses.length === 0) {
+    finalAssignedClasses = [
+      {
+        branch: primaryBranch,
+        className: primaryClass,
+        section: primarySection,
+        subjects: Array.isArray(subjects) ? subjects : [],
+      },
+    ];
+  }
+
+  await validateBranchClassSubjects(primaryBranch, primaryClass, primarySection, subjects, role);
 
   const isSelfApproved = role === 'admin';
 
@@ -103,10 +137,11 @@ export const register = catchAsync(async (req, res) => {
     email,
     password,
     role,
-    branch,
-    className,
-    section: role === 'admin' ? '' : section,
+    branch: primaryBranch,
+    className: primaryClass,
+    section: role === 'admin' ? '' : primarySection,
     subjects: ['faculty', 'coordinator'].includes(role) ? subjects || [] : [],
+    assignedClasses: finalAssignedClasses,
     approvalStatus: isSelfApproved ? 'approved' : 'pending',
     isActive: isSelfApproved,
   });
@@ -127,6 +162,7 @@ export const register = catchAsync(async (req, res) => {
           branch: user.branch,
           className: user.className,
           section: user.section,
+          assignedClasses: user.assignedClasses,
           approvalStatus: user.approvalStatus,
         },
       },
@@ -151,6 +187,7 @@ export const register = catchAsync(async (req, res) => {
         className: user.className,
         section: user.section,
         subjects: user.subjects,
+        assignedClasses: user.assignedClasses,
       },
     },
     meta: null,
@@ -226,6 +263,7 @@ export const login = catchAsync(async (req, res) => {
         className: user.className,
         section: user.section,
         subjects: user.subjects,
+        assignedClasses: user.assignedClasses || [],
       },
     },
     meta: null,
@@ -289,6 +327,7 @@ export const getMe = catchAsync(async (req, res) => {
         className: req.user.className,
         section: req.user.section,
         subjects: req.user.subjects,
+        assignedClasses: req.user.assignedClasses || [],
       },
     },
     meta: null,
@@ -302,6 +341,7 @@ export const updateProfileValidations = [
   body('className').optional().trim().notEmpty(),
   body('branch').optional().trim().notEmpty(),
   body('subjects').optional().isArray(),
+  body('assignedClasses').optional().isArray(),
 ];
 
 export const updateProfile = catchAsync(async (req, res) => {
@@ -317,13 +357,14 @@ export const updateProfile = catchAsync(async (req, res) => {
     });
   }
 
-  const { name, section, className, branch, subjects } = req.body;
+  const { name, section, className, branch, subjects, assignedClasses } = req.body;
   const updates = {};
   if (name !== undefined) updates.name = name;
   if (section !== undefined) updates.section = section;
   if (className !== undefined) updates.className = className;
   if (branch !== undefined) updates.branch = branch;
   if (subjects !== undefined) updates.subjects = subjects;
+  if (assignedClasses !== undefined) updates.assignedClasses = assignedClasses;
 
   const user = await User.findByIdAndUpdate(req.user._id, updates, {
     new: true,
@@ -342,6 +383,7 @@ export const updateProfile = catchAsync(async (req, res) => {
         className: user.className,
         section: user.section,
         subjects: user.subjects,
+        assignedClasses: user.assignedClasses || [],
       },
     },
     meta: null,

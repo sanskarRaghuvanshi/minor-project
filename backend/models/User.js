@@ -41,6 +41,14 @@ const userSchema = new Schema(
       match: [/^[A-Z0-9]{0,10}$/, 'Section must be alphanumeric'],
     },
     subjects: [{ type: String }],
+    assignedClasses: [
+      {
+        branch: { type: String, trim: true },
+        className: { type: String, trim: true },
+        section: { type: String, trim: true, default: '' },
+        subjects: [{ type: String, trim: true }],
+      },
+    ],
     avatar: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
     approvalStatus: {

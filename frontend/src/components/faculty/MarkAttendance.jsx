@@ -31,12 +31,34 @@ const MarkAttendance = () => {
   const [filterTab, setFilterTab] = useState('all');
 
   const prevState = useRef(attendance);
-  const subjects = user?.subjects || [];
+
+  // Build class list for dropdown
+  const assignedClasses = user?.assignedClasses?.length
+    ? user.assignedClasses
+    : [{ branch: user?.branch, className: user?.className, section: user?.section, subjects: user?.subjects || [] }];
+
+  const [activeClass, setActiveClass] = useState(assignedClasses[0] || {});
+
+  // Subjects for the active class
+  const subjects = activeClass.subjects?.length
+    ? activeClass.subjects
+    : (user?.subjects || []);
+
+  // Reset subject when active class changes
+  useEffect(() => {
+    setSubject('');
+  }, [activeClass]);
+
+  useEffect(() => {
+    if (subjects.length > 0 && !subject) {
+      setSubject(subjects[0]);
+    }
+  }, [subjects, subject]);
 
   const toggleSlotSelection = (slotNum) => {
     setSelectedSlots((prev) => {
       if (prev.includes(slotNum)) {
-        if (prev.length === 1) return prev; // Keep at least one period selected
+        if (prev.length === 1) return prev;
         return prev.filter((s) => s !== slotNum).sort((a, b) => a - b);
       }
       return [...prev, slotNum].sort((a, b) => a - b);
@@ -49,12 +71,16 @@ const MarkAttendance = () => {
     setError('');
     try {
       const { data } = await axiosInstance.get(ENDPOINTS.FACULTY.STUDENTS, {
-        params: { branch: user?.branch, className: user?.className, limit: 100 },
+        params: {
+          branch: activeClass.branch,
+          className: activeClass.className,
+          section: activeClass.section,
+          limit: 100,
+        },
       });
       const fetched = data.data || [];
       setStudents(fetched);
 
-      // Check if attendance already exists for this date/subject/first selected slot
       const primarySlot = selectedSlots[0] || 1;
       const existing = await axiosInstance
         .get(ENDPOINTS.FACULTY.ATTENDANCE_BY_DATE_SUBJECT(date, subject), {
@@ -80,13 +106,7 @@ const MarkAttendance = () => {
     } finally {
       setLoading(false);
     }
-  }, [subject, date, selectedSlots, user?.branch, user?.className]);
-
-  useEffect(() => {
-    if (subjects.length > 0 && !subject) {
-      setSubject(subjects[0]);
-    }
-  }, [subjects, subject]);
+  }, [subject, date, selectedSlots, activeClass]);
 
   useEffect(() => {
     if (subject) fetchStudents();
@@ -202,7 +222,7 @@ const MarkAttendance = () => {
             <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#CBD5E1' }} />
             <span style={{ fontSize: '12px', color: '#475569', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#94A3B8' }}>groups</span>
-              {user?.branch} • {user?.className}{user?.section ? ` - ${user.section}` : ''}
+              {activeClass.branch} • {activeClass.className}{activeClass.section ? ` - ${activeClass.section}` : ''}
             </span>
           </div>
           <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
@@ -236,10 +256,41 @@ const MarkAttendance = () => {
         </div>
       </div>
 
+      {/* Class Switcher Pills — only shown when teacher has multiple classes */}
+      {assignedClasses.length > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#64748B' }}>school</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginRight: '4px' }}>Class:</span>
+          {assignedClasses.map((ac, i) => {
+            const isActive = ac.branch === activeClass.branch && ac.className === activeClass.className && ac.section === activeClass.section;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => { setActiveClass(ac); setStudents([]); setAttendance({}); }}
+                style={{
+                  padding: '5px 14px',
+                  borderRadius: '100px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: isActive ? '1.5px solid #2563EB' : '1.5px solid #E2E8F0',
+                  background: isActive ? '#2563EB' : '#fff',
+                  color: isActive ? '#fff' : '#475569',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {ac.className} – {ac.section}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Session Configuration Card */}
       <div style={{ background: '#fff', borderRadius: '20px', padding: '20px', boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid rgba(226,232,240,0.8)', marginBottom: '20px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '16px' }}>
-          
+
           {/* Date Picker */}
           <div style={{ background: '#F8FAFC', borderRadius: '14px', padding: '10px 14px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span className="material-symbols-outlined" style={{ color: '#2563EB', fontSize: '22px' }}>calendar_today</span>

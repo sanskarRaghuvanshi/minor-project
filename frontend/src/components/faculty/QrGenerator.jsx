@@ -44,7 +44,22 @@ const QrGenerator = () => {
   const [activeSessions, setActiveSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
 
-  const subjects = user?.subjects || [];
+  // Build class list (fallback to primary if no assignedClasses)
+  const assignedClasses = user?.assignedClasses?.length
+    ? user.assignedClasses
+    : [{ branch: user?.branch, className: user?.className, section: user?.section, subjects: user?.subjects || [] }];
+
+  const [activeClass, setActiveClass] = useState(assignedClasses[0] || {});
+
+  // Subjects from the active class
+  const subjects = activeClass.subjects?.length
+    ? activeClass.subjects
+    : (user?.subjects || []);
+
+  // Reset subject when class changes
+  useEffect(() => {
+    setSubject('');
+  }, [activeClass]);
 
   const acquireLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -191,7 +206,7 @@ const QrGenerator = () => {
             </span>
             <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#CBD5E1' }} />
             <span style={{ fontSize: '12px', color: '#475569', fontWeight: 600 }}>
-              {user?.branch} • {user?.className}
+              {activeClass.branch} • {activeClass.className}
             </span>
           </div>
           <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
@@ -320,6 +335,35 @@ const QrGenerator = () => {
             alignItems: 'flex-end',
           }}
         >
+          {/* Class Selector — shown when faculty teaches multiple classes */}
+          {assignedClasses.length > 1 && (
+            <div style={{ background: '#F0F9FF', borderRadius: '14px', padding: '10px 14px', border: '1px solid #BAE6FD', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-symbols-outlined" style={{ color: '#0284C7', fontSize: '22px' }}>school</span>
+              <div style={{ flex: 1 }}>
+                <label htmlFor="gen-qr-class" style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#0369A1', letterSpacing: '0.04em' }}>Teaching Class</label>
+                <select
+                  id="gen-qr-class"
+                  value={`${activeClass.branch}||${activeClass.className}||${activeClass.section}`}
+                  onChange={(e) => {
+                    const [branch, className, section] = e.target.value.split('||');
+                    const found = assignedClasses.find(ac => ac.branch === branch && ac.className === className && ac.section === section);
+                    setActiveClass(found || { branch, className, section });
+                    setGenerated(false);
+                    setSessionData(null);
+                  }}
+                  disabled={loading}
+                  style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, color: '#0F172A', width: '100%', cursor: 'pointer' }}
+                >
+                  {assignedClasses.map((ac, i) => (
+                    <option key={i} value={`${ac.branch}||${ac.className}||${ac.section}`}>
+                      {ac.branch?.split(' ')[0]} • {ac.className} ({ac.section})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           {/* Subject Dropdown */}
           <div
             style={{

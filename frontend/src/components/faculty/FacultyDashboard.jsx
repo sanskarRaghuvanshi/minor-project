@@ -11,13 +11,27 @@ const FacultyDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [hoveredDay, setHoveredDay] = useState(null);
 
+  // Build assigned classes list (fall back to primary class if assignedClasses not set)
+  const assignedClasses = user?.assignedClasses?.length
+    ? user.assignedClasses
+    : [{ branch: user?.branch, className: user?.className, section: user?.section }];
+
+  const [activeClass, setActiveClass] = useState(assignedClasses[0] || {});
+
   useEffect(() => {
+    setLoading(true);
     axiosInstance
-      .get(ENDPOINTS.FACULTY.DASHBOARD_STATS)
+      .get(ENDPOINTS.FACULTY.DASHBOARD_STATS, {
+        params: {
+          branch: activeClass.branch,
+          className: activeClass.className,
+          section: activeClass.section,
+        },
+      })
       .then(({ data }) => setStats(data.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [activeClass]);
 
   const initials = user?.name
     ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -85,20 +99,44 @@ const FacultyDashboard = () => {
               {user?.name?.split(' ')[0] || 'Faculty'}
             </h1>
             <p style={{ margin: 0, fontSize: '12px', color: '#64748B', fontWeight: 500, marginTop: '2px' }}>
-              {user?.branch} • {user?.className}{user?.section ? ` - ${user.section}` : ''}
+              {activeClass.branch} • {activeClass.className}{activeClass.section ? ` - ${activeClass.section}` : ''}
             </p>
           </div>
         </div>
-        <div style={{
-          padding: '6px 14px', borderRadius: '12px', border: '1px solid #E2E8F0',
-          fontSize: '12px', fontWeight: 600, color: '#475569', background: '#F8FAFC',
-          display: 'flex', alignItems: 'center', gap: '6px'
-        }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
-          Faculty • {user?.branch}
+
+        {/* Class Selector — shown when faculty teaches multiple classes */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {assignedClasses.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '6px 12px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#2563EB' }}>school</span>
+              <select
+                value={`${activeClass.branch}||${activeClass.className}||${activeClass.section}`}
+                onChange={(e) => {
+                  const [branch, className, section] = e.target.value.split('||');
+                  setActiveClass({ branch, className, section });
+                }}
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '12px', fontWeight: 700, color: '#0F172A', cursor: 'pointer' }}
+              >
+                {assignedClasses.map((ac, i) => (
+                  <option key={i} value={`${ac.branch}||${ac.className}||${ac.section}`}>
+                    {ac.branch?.split(' ')[0]} • {ac.className} ({ac.section})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div style={{
+            padding: '6px 14px', borderRadius: '12px', border: '1px solid #E2E8F0',
+            fontSize: '12px', fontWeight: 600, color: '#475569', background: '#F8FAFC',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+            Faculty • {activeClass.branch}
+          </div>
         </div>
       </div>
 
+      {/* Section label updated to show active class */}
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           {[1, 2, 3].map((i) => (
