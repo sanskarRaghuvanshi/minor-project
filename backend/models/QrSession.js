@@ -59,6 +59,24 @@ const qrSessionSchema = new Schema(
       type: String,
       default: 'B05',
     },
+    location: {
+      lat: {
+        type: Number,
+        default: null,
+      },
+      lng: {
+        type: Number,
+        default: null,
+      },
+      radius: {
+        type: Number,
+        default: 50, // default 50 meters
+      },
+    },
+    geoFencingEnabled: {
+      type: Boolean,
+      default: false,
+    },
     scannedStudents: [
       {
         student: {

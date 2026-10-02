@@ -29,7 +29,16 @@ export const generateQr = catchAsync(async (req, res) => {
     });
   }
 
-  const { subject, date, slotNumber = 1, timeSlot = '09:45 - 10:35', room = 'B05' } = req.body;
+  const {
+    subject,
+    date,
+    slotNumber = 1,
+    timeSlot = '09:45 - 10:35',
+    room = 'B05',
+    lat = null,
+    lng = null,
+    radius = 50,
+  } = req.body;
   const faculty = req.user;
 
   const session = await createQrSession({
@@ -39,6 +48,9 @@ export const generateQr = catchAsync(async (req, res) => {
     slotNumber: Number(slotNumber) || 1,
     timeSlot,
     room,
+    lat: lat !== undefined && lat !== null ? Number(lat) : null,
+    lng: lng !== undefined && lng !== null ? Number(lng) : null,
+    radius: Number(radius) || 50,
     branch: faculty.branch,
     className: faculty.className,
     section: faculty.section,
@@ -50,6 +62,7 @@ export const generateQr = catchAsync(async (req, res) => {
     date: session.date,
     slotNumber: session.slotNumber,
     timeSlot: session.timeSlot,
+    geoFencingEnabled: session.geoFencingEnabled,
   });
 
   const qrDataUrl = await QRCode.toDataURL(qrData, {
@@ -61,7 +74,15 @@ export const generateQr = catchAsync(async (req, res) => {
     },
   });
 
-  logger.info({ sessionToken: session.sessionToken, facultyId: faculty._id, slotNumber: session.slotNumber }, 'QR code generated');
+  logger.info(
+    {
+      sessionToken: session.sessionToken,
+      facultyId: faculty._id,
+      slotNumber: session.slotNumber,
+      geoFencingEnabled: session.geoFencingEnabled,
+    },
+    'QR code generated',
+  );
 
   res.status(201).json({
     success: true,
@@ -79,6 +100,8 @@ export const generateQr = catchAsync(async (req, res) => {
         branch: session.branch,
         className: session.className,
         section: session.section,
+        geoFencingEnabled: session.geoFencingEnabled,
+        location: session.location,
       },
     },
     meta: null,
@@ -178,7 +201,7 @@ export const scanAttendance = catchAsync(async (req, res) => {
     });
   }
 
-  const { sessionToken } = req.body;
+  const { sessionToken, lat, lng } = req.body;
   const studentId = req.user._id;
 
   const result = await scanAndMarkAttendance(
@@ -186,6 +209,7 @@ export const scanAttendance = catchAsync(async (req, res) => {
     studentId,
     req.ip,
     req.headers['user-agent'],
+    { lat, lng },
   );
 
   res.status(200).json({

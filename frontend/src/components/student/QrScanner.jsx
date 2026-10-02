@@ -7,16 +7,63 @@ import { useToast } from '../common/Toast';
 const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   const { addToast } = useToast();
   const [scanning, setScanning] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [lastScanned, setLastScanned] = useState(null);
+  const [scanResult, setScanResult] = useState(null);
   const [availableCameras, setAvailableCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState(null);
   const [permissionState, setPermissionState] = useState('prompt');
+
+  // GPS Geolocation state for classroom verification
+  const [coords, setCoords] = useState(null);
+  const [gpsStatus, setGpsStatus] = useState('prompt'); // 'prompt' | 'locating' | 'ready' | 'denied'
+  const coordsRef = useRef(null);
 
   const isMountedRef = useRef(true);
   const html5QrcodeRef = useRef(null);
   const isProcessingRef = useRef(false);
   const selectedCameraIdRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Acquire student GPS coordinates
+  const acquireGps = useCallback(() => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        setGpsStatus('denied');
+        resolve(null);
+        return;
+      }
+      setGpsStatus('locating');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!isMountedRef.current) return resolve(null);
+          const currentCoords = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: Math.round(pos.coords.accuracy || 0),
+          };
+          coordsRef.current = currentCoords;
+          setCoords(currentCoords);
+          setGpsStatus('ready');
+          resolve(currentCoords);
+        },
+        (err) => {
+          console.warn('Student GPS permission/fetch error:', err);
+          if (isMountedRef.current) {
+            setGpsStatus('denied');
+          }
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+      );
+    });
+  }, []);
+
+  // Check geolocation permission state on mount and trigger prompt
+  useEffect(() => {
+    acquireGps();
+  }, [acquireGps]);
 
   const stopScanner = useCallback(async () => {
     if (html5QrcodeRef.current) {
@@ -71,12 +118,29 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         setLastScanned(sessionToken);
         setError('');
 
-        const { data } = await axiosInstance.post(ENDPOINTS.STUDENT.SCAN_ATTENDANCE, {
-          sessionToken,
-        });
+        // If GPS is not acquired yet, try acquiring it now
+        let activeCoords = coordsRef.current || coords;
+        if (!activeCoords) {
+          activeCoords = await acquireGps();
+        }
+
+        const payload = { sessionToken };
+        if (activeCoords?.lat != null && activeCoords?.lng != null) {
+          payload.lat = activeCoords.lat;
+          payload.lng = activeCoords.lng;
+        }
+
+        const { data } = await axiosInstance.post(ENDPOINTS.STUDENT.SCAN_ATTENDANCE, payload);
+
+        setScanResult(data.data);
 
         if (data.data?.alreadyScanned) {
           addToast('Attendance was already marked for this session', 'info');
+        } else if (data.data?.distance != null) {
+          addToast(
+            `Attendance marked! (Verified inside classroom • ${data.data.distance}m away)`,
+            'success',
+          );
         } else {
           addToast('Attendance marked successfully!', 'success');
         }
@@ -86,13 +150,22 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         }
       } catch (err) {
         let errorMessage = 'Failed to mark attendance';
-        if (err.response?.data?.errorCode === 'ALREADY_SCANNED') {
+        const errorCode = err.response?.data?.errorCode;
+
+        if (errorCode === 'GEOFENCE_VIOLATION') {
+          errorMessage =
+            err.response?.data?.message ||
+            'Geo-fence check failed: You are outside the classroom radius (50m).';
+        } else if (errorCode === 'LOCATION_REQUIRED') {
+          errorMessage =
+            'Classroom GPS verification is required. Tap "Enable Location" to allow GPS in your browser.';
+        } else if (errorCode === 'ALREADY_SCANNED') {
           errorMessage = 'You have already scanned this QR code';
-        } else if (err.response?.data?.errorCode === 'INVALID_QR') {
+        } else if (errorCode === 'INVALID_QR') {
           errorMessage = 'Invalid or non-existent QR code session';
-        } else if (err.response?.data?.errorCode === 'QR_EXPIRED') {
+        } else if (errorCode === 'QR_EXPIRED') {
           errorMessage = 'This QR session has expired or been closed by the teacher';
-        } else if (err.response?.data?.errorCode === 'FORBIDDEN') {
+        } else if (errorCode === 'FORBIDDEN') {
           errorMessage = err.response.data.message || 'You are not enrolled in this class section';
         } else if (err.response?.data?.message) {
           errorMessage = err.response.data.message;
@@ -116,15 +189,50 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
               } catch (e) {}
             }
           }
-        }, 2000);
+        }, 2200);
       }
     },
-    [addToast, onScanSuccess, onScanError],
+    [addToast, onScanSuccess, onScanError, coords, acquireGps],
   );
 
   const handleScanError = useCallback((errorMessage) => {
     console.debug('QR scan frame error:', errorMessage);
   }, []);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      setError('');
+
+      let fileScanner = null;
+      try {
+        fileScanner = new Html5Qrcode('qr-file-reader-dummy');
+        const decodedText = await fileScanner.scanFile(file, false);
+        if (decodedText) {
+          await handleScanSuccess(decodedText);
+        }
+      } finally {
+        if (fileScanner) {
+          try {
+            await fileScanner.clear();
+          } catch (e) {}
+        }
+      }
+    } catch (err) {
+      console.error('Failed to parse uploaded QR image:', err);
+      const msg = 'No readable QR code found in the image. Please try a clearer picture.';
+      setError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const enumerateCameras = useCallback(async () => {
     try {
@@ -289,10 +397,12 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
   const handleRetry = useCallback(async () => {
     isProcessingRef.current = false;
     setLastScanned(null);
+    setScanResult(null);
     setError('');
+    acquireGps();
     await stopScanner();
     setTimeout(startScanner, 400);
-  }, [stopScanner, startScanner]);
+  }, [stopScanner, startScanner, acquireGps]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -335,6 +445,72 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         }
       `}</style>
 
+      {/* Hidden dummy container for file scanning */}
+      <div id="qr-file-reader-dummy" style={{ display: 'none' }} />
+
+      {/* Hidden File Input for QR Image Upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        onChange={handleFileUpload}
+        style={{ display: 'none' }}
+      />
+
+      {/* GPS Location Pill Indicator / Enable Button */}
+      {gpsStatus !== 'ready' ? (
+        <button
+          type="button"
+          onClick={acquireGps}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 14px',
+            borderRadius: '100px',
+            fontSize: '11px',
+            fontWeight: 700,
+            marginBottom: '12px',
+            cursor: 'pointer',
+            background: gpsStatus === 'locating' ? '#FEF3C7' : '#EFF6FF',
+            color: gpsStatus === 'locating' ? '#D97706' : '#2563EB',
+            border: `1px solid ${gpsStatus === 'locating' ? '#FDE68A' : '#BFDBFE'}`,
+            boxShadow: '0 1px 3px rgba(37,99,235,0.1)',
+            transition: 'all 0.15s',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+            {gpsStatus === 'locating' ? 'sync' : 'near_me'}
+          </span>
+          <span>
+            {gpsStatus === 'locating'
+              ? 'Requesting GPS Location...'
+              : '📍 Tap to Allow Classroom Location (Required for Geo-Fence)'}
+          </span>
+        </button>
+      ) : (
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 12px',
+            borderRadius: '100px',
+            fontSize: '11px',
+            fontWeight: 700,
+            marginBottom: '12px',
+            background: '#ECFDF5',
+            color: '#059669',
+            border: '1px solid #BBF7D0',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#059669' }}>
+            location_on
+          </span>
+          <span>GPS Active • Classroom Check Ready (±{coords?.accuracy || 0}m)</span>
+        </div>
+      )}
+
       {/* Viewfinder Frame Container */}
       <div
         style={{
@@ -374,10 +550,54 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
               }}
             >
               {/* Corner accents */}
-              <div style={{ position: 'absolute', top: -2, left: -2, width: '18px', height: '18px', borderTop: '3px solid #2563EB', borderLeft: '3px solid #2563EB', borderTopLeftRadius: '6px' }} />
-              <div style={{ position: 'absolute', top: -2, right: -2, width: '18px', height: '18px', borderTop: '3px solid #2563EB', borderRight: '3px solid #2563EB', borderTopRightRadius: '6px' }} />
-              <div style={{ position: 'absolute', bottom: -2, left: -2, width: '18px', height: '18px', borderBottom: '3px solid #2563EB', borderLeft: '3px solid #2563EB', borderBottomLeftRadius: '6px' }} />
-              <div style={{ position: 'absolute', bottom: -2, right: -2, width: '18px', height: '18px', borderBottom: '3px solid #2563EB', borderRight: '3px solid #2563EB', borderBottomRightRadius: '6px' }} />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -2,
+                  left: -2,
+                  width: '18px',
+                  height: '18px',
+                  borderTop: '3px solid #2563EB',
+                  borderLeft: '3px solid #2563EB',
+                  borderTopLeftRadius: '6px',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -2,
+                  width: '18px',
+                  height: '18px',
+                  borderTop: '3px solid #2563EB',
+                  borderRight: '3px solid #2563EB',
+                  borderTopRightRadius: '6px',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: -2,
+                  left: -2,
+                  width: '18px',
+                  height: '18px',
+                  borderBottom: '3px solid #2563EB',
+                  borderLeft: '3px solid #2563EB',
+                  borderBottomLeftRadius: '6px',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: -2,
+                  right: -2,
+                  width: '18px',
+                  height: '18px',
+                  borderBottom: '3px solid #2563EB',
+                  borderRight: '3px solid #2563EB',
+                  borderBottomRightRadius: '6px',
+                }}
+              />
             </div>
           </div>
         )}
@@ -446,48 +666,90 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         </div>
       )}
 
-      {/* Camera Selection Switcher */}
-      {availableCameras.length > 1 && scanning && (
-        <div
+      {/* Action Controls (Camera Switcher & Upload Image Button) */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          maxWidth: '320px',
+          width: '100%',
+          marginBottom: '14px',
+        }}
+      >
+        {/* Upload QR Image Button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
           style={{
-            marginBottom: '14px',
-            display: 'flex',
+            flex: 1,
+            minWidth: '130px',
+            display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
+            gap: '6px',
             background: '#F8FAFC',
-            padding: '6px 14px',
+            padding: '8px 12px',
             borderRadius: '12px',
             border: '1px solid #E2E8F0',
-            maxWidth: '280px',
-            width: '100%',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: '#1E293B',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
           }}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#64748B' }}>
-            cameraswitch
+          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#2563EB' }}>
+            {isUploading ? 'sync' : 'upload_file'}
           </span>
-          <select
-            value={selectedCameraId || ''}
-            onChange={(e) => switchCamera(e.target.value || undefined)}
+          <span>{isUploading ? 'Processing...' : 'Upload QR Image'}</span>
+        </button>
+
+        {/* Camera Switcher if multiple cameras */}
+        {availableCameras.length > 1 && scanning && (
+          <div
             style={{
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              fontSize: '0.825rem',
-              fontWeight: 600,
-              color: '#1E293B',
-              cursor: 'pointer',
               flex: 1,
+              minWidth: '130px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              background: '#F8FAFC',
+              padding: '8px 12px',
+              borderRadius: '12px',
+              border: '1px solid #E2E8F0',
             }}
           >
-            {availableCameras.map((cam, idx) => (
-              <option key={cam.deviceId} value={cam.deviceId}>
-                {cam.label || `Camera ${idx + 1}`}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+            <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#64748B' }}>
+              cameraswitch
+            </span>
+            <select
+              value={selectedCameraId || ''}
+              onChange={(e) => switchCamera(e.target.value || undefined)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#1E293B',
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              {availableCameras.map((cam, idx) => (
+                <option key={cam.deviceId} value={cam.deviceId}>
+                  {cam.label || `Cam ${idx + 1}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       {/* Error alert */}
       {error && permissionState !== 'denied' && (
@@ -512,7 +774,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
             onClick={handleRetry}
             style={{ fontSize: '0.75rem', padding: '4px 10px' }}
           >
-            Retry Camera
+            Retry Scanner
           </button>
         </div>
       )}
@@ -534,7 +796,11 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
           }}
         >
           <strong style={{ display: 'block', fontSize: '0.925rem' }}>✓ Scanned Successfully</strong>
-          <span style={{ fontSize: '0.775rem', opacity: 0.85 }}>Recording attendance...</span>
+          <span style={{ fontSize: '0.775rem', opacity: 0.9 }}>
+            {scanResult?.distance != null
+              ? `Verified inside classroom (${scanResult.distance}m away)`
+              : 'Attendance recorded successfully'}
+          </span>
         </div>
       )}
 

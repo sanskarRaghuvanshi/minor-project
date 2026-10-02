@@ -5,6 +5,7 @@ import { bulkUpsertAttendance } from './attendanceService.js';
 import { logAudit } from './auditService.js';
 import logger from '../config/logger.js';
 import ApiError from '../utils/ApiError.js';
+import calculateDistanceMeters from '../utils/haversine.js';
 
 const QR_SESSION_TTL_MINUTES = Number(process.env.QR_SESSION_TTL_MINUTES) || 10;
 
@@ -15,12 +16,17 @@ export const createQrSession = async ({
   slotNumber = 1,
   timeSlot = '09:45 - 10:35',
   room = 'B05',
+  lat = null,
+  lng = null,
+  radius = 50,
   branch,
   className,
   section,
 }) => {
   const sessionToken = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + QR_SESSION_TTL_MINUTES * 60 * 1000);
+
+  const hasLocation = lat !== null && lng !== null && !isNaN(Number(lat)) && !isNaN(Number(lng));
 
   const session = await QrSession.create({
     sessionToken,
@@ -30,6 +36,14 @@ export const createQrSession = async ({
     slotNumber: Number(slotNumber) || 1,
     timeSlot: timeSlot || '09:45 - 10:35',
     room: room || 'B05',
+    location: hasLocation
+      ? {
+          lat: Number(lat),
+          lng: Number(lng),
+          radius: Number(radius) || 50,
+        }
+      : undefined,
+    geoFencingEnabled: hasLocation,
     expiresAt,
     branch,
     className,
@@ -38,7 +52,10 @@ export const createQrSession = async ({
     isActive: true,
   });
 
-  logger.info({ sessionToken, facultyId, subject, date, slotNumber }, 'QR session created');
+  logger.info(
+    { sessionToken, facultyId, subject, date, slotNumber, geoFencingEnabled: hasLocation },
+    'QR session created',
+  );
 
   return session;
 };
@@ -55,7 +72,13 @@ export const getActiveSessionsByFaculty = async (facultyId) => {
   return sessions;
 };
 
-export const scanAndMarkAttendance = async (sessionToken, studentId, ipAddress, userAgent) => {
+export const scanAndMarkAttendance = async (
+  sessionToken,
+  studentId,
+  ipAddress,
+  userAgent,
+  studentLocation = {},
+) => {
   const session = await QrSession.findOne({ sessionToken, isActive: true });
   if (!session) {
     throw new ApiError('Invalid or expired QR code session', 400, 'INVALID_QR');
@@ -84,6 +107,39 @@ export const scanAndMarkAttendance = async (sessionToken, studentId, ipAddress, 
     throw new ApiError('Student is not enrolled in this class section', 403, 'FORBIDDEN');
   }
 
+  // Geo-fencing verification check
+  let measuredDistance = null;
+  if (session.geoFencingEnabled && session.location?.lat != null && session.location?.lng != null) {
+    const sLat = studentLocation?.lat;
+    const sLng = studentLocation?.lng;
+
+    if (sLat == null || sLng == null || isNaN(Number(sLat)) || isNaN(Number(sLng))) {
+      throw new ApiError(
+        'Classroom location verification is required. Please enable GPS/Location permissions on your device.',
+        403,
+        'LOCATION_REQUIRED',
+      );
+    }
+
+    measuredDistance = calculateDistanceMeters(
+      session.location.lat,
+      session.location.lng,
+      Number(sLat),
+      Number(sLng),
+    );
+
+    const allowedRadius = session.location.radius || 50;
+    const gpsTolerance = 15; // 15m indoor GPS drift tolerance
+
+    if (measuredDistance > allowedRadius + gpsTolerance) {
+      throw new ApiError(
+        `Geo-fence violation: You are ${measuredDistance}m away from the classroom (Allowed: ${allowedRadius}m). Attendance must be scanned from inside the classroom.`,
+        403,
+        'GEOFENCE_VIOLATION',
+      );
+    }
+  }
+
   const alreadyScanned = session.scannedStudents.some(
     (s) => s.student.toString() === studentId.toString(),
   );
@@ -102,6 +158,7 @@ export const scanAndMarkAttendance = async (sessionToken, studentId, ipAddress, 
         email: student.email,
       },
       alreadyScanned: true,
+      distance: measuredDistance,
       message: 'Attendance already recorded for this session',
     };
   }
@@ -142,12 +199,16 @@ export const scanAndMarkAttendance = async (sessionToken, studentId, ipAddress, 
       date: session.date,
       slotNumber: session.slotNumber || 1,
       status: 'present',
+      distance: measuredDistance,
     },
     ipAddress,
     userAgent,
   });
 
-  logger.info({ sessionToken, studentId, subject: session.subject, slotNumber: session.slotNumber }, 'QR attendance marked');
+  logger.info(
+    { sessionToken, studentId, subject: session.subject, slotNumber: session.slotNumber, measuredDistance },
+    'QR attendance marked',
+  );
 
   return {
     session: {
@@ -155,12 +216,14 @@ export const scanAndMarkAttendance = async (sessionToken, studentId, ipAddress, 
       subject: session.subject,
       date: session.date,
       slotNumber: session.slotNumber,
+      geoFencingEnabled: session.geoFencingEnabled,
     },
     student: {
       id: student._id,
       name: student.name,
       email: student.email,
     },
+    distance: measuredDistance,
     scannedAt: session.scannedStudents[session.scannedStudents.length - 1].scannedAt,
   };
 };

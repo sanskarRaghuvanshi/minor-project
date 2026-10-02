@@ -5,9 +5,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import Skeleton from '../common/Skeleton';
 import usePolling from '../../hooks/usePolling';
-import Modal from '../common/Modal';
 import { useToast } from '../common/Toast';
-import { Html5Qrcode } from 'html5-qrcode';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -16,8 +14,6 @@ const StudentDashboard = () => {
   const [stats, setStats] = useState(null);
   const [recentRecords, setRecentRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showQrUpload, setShowQrUpload] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [hoveredDay, setHoveredDay] = useState(null);
 
   const fetchDashboardData = useCallback(async () => {
@@ -40,63 +36,6 @@ const StudentDashboard = () => {
   }, [fetchDashboardData]);
 
   usePolling(fetchDashboardData, 30000);
-
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      addToast?.('Please upload an image file', 'error');
-      return;
-    }
-
-    setUploading(true);
-    event.target.value = '';
-
-    let html5Qrcode = null;
-    try {
-      html5Qrcode = new Html5Qrcode('qr-upload-reader');
-      const result = await html5Qrcode.scanFile(file, true);
-
-      if (result) {
-        const qrData = JSON.parse(result);
-        const sessionToken = qrData.sessionToken;
-
-        if (!sessionToken) {
-          throw new Error('Invalid QR code format');
-        }
-
-        await axiosInstance.post(ENDPOINTS.STUDENT.SCAN_ATTENDANCE, {
-          sessionToken,
-        });
-
-        addToast?.('Attendance marked successfully via QR code!', 'success');
-        setShowQrUpload(false);
-        fetchDashboardData();
-      } else {
-        throw new Error('No QR code found in image');
-      }
-    } catch (err) {
-      let errorMessage = 'Failed to read QR code from image';
-      if (err.response?.data?.errorCode === 'ALREADY_SCANNED') {
-        errorMessage = 'You have already scanned this QR code';
-      } else if (err.response?.data?.errorCode === 'INVALID_QR') {
-        errorMessage = 'Invalid or expired QR code';
-      } else if (err.response?.data?.errorCode === 'FORBIDDEN') {
-        errorMessage = 'You are not enrolled in this class';
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      addToast?.(errorMessage, 'error');
-    } finally {
-      if (html5Qrcode) {
-        try { html5Qrcode.clear(); } catch (_) { /* ignore */ }
-      }
-      setUploading(false);
-    }
-  };
 
   const initials = user?.name
     ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -424,24 +363,6 @@ const StudentDashboard = () => {
                     <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>chevron_right</span>
                   </button>
 
-                  {/* Secondary: Upload Screenshot */}
-                  <button
-                    type="button"
-                    onClick={() => setShowQrUpload(true)}
-                    style={{
-                      width: '100%', padding: '11px 16px', borderRadius: '14px',
-                      background: '#F8FAFC', color: '#0F172A',
-                      border: '1px solid #E2E8F0', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span className="material-symbols-outlined" style={{ color: '#2563EB', fontSize: '20px' }}>upload_file</span>
-                      <span>Upload QR Screenshot</span>
-                    </div>
-                    <span className="material-symbols-outlined" style={{ color: '#94A3B8', fontSize: '18px' }}>chevron_right</span>
-                  </button>
-
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <button
                       type="button"
@@ -536,47 +457,6 @@ const StudentDashboard = () => {
               </div>
             </div>
           )}
-
-          {/* QR Screenshot Upload Modal */}
-          <Modal
-            isOpen={showQrUpload}
-            onClose={() => setShowQrUpload(false)}
-            title="Upload QR Code Screenshot"
-            size="md"
-          >
-            <div style={{ textAlign: 'center', padding: '8px 0' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  padding: '10px 20px', borderRadius: '12px', background: '#2563EB', color: '#fff',
-                  fontSize: '13px', fontWeight: 700
-                }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>photo_library</span>
-                  Choose Screenshot Image
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    disabled={uploading}
-                    style={{ display: 'none' }}
-                  />
-                </label>
-              </div>
-
-              {uploading && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '16px 0' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#2563EB', animation: 'spin 1s linear infinite' }}>progress_activity</span>
-                  <p style={{ color: '#64748B', margin: 0, fontSize: '13px' }}>Scanning QR code from uploaded image...</p>
-                </div>
-              )}
-
-              {!uploading && (
-                <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
-                  Take a screenshot or photo of the attendance QR code displayed by your faculty member, then upload it to mark roll call automatically.
-                </p>
-              )}
-            </div>
-          </Modal>
         </>
       ) : (
         <div style={{ background: '#fff', borderRadius: '24px', padding: '40px 20px', textAlign: 'center', border: '1px solid rgba(226,232,240,0.8)' }}>
