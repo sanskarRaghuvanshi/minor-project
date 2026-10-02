@@ -33,6 +33,7 @@ const studentLinks = [
   { to: '/student/scan', label: 'Scan Attendance', icon: 'qr_code_scanner' },
   { to: '/student/apply-leave', label: 'Apply Leave', icon: 'flight_takeoff' },
   { to: '/student/my-leaves', label: 'My Leaves', icon: 'description' },
+  { to: '/student/settings', label: 'Settings', icon: 'settings' },
 ];
 
 const Sidebar = () => {
@@ -165,7 +166,11 @@ const Sidebar = () => {
             </div>
 
             <button
-              onClick={() => { navigate('/faculty/settings'); setIsOpen(false); }}
+              onClick={() => {
+                const target = user?.role === 'student' ? '/student/settings' : '/faculty/settings';
+                navigate(target);
+                setIsOpen(false);
+              }}
               type="button"
               title="Settings Terminal"
               style={{
