@@ -33,6 +33,7 @@ const CoordinatorTeachers = lazy(() => import('./components/coordinator/Coordina
 const CoordinatorStudents = lazy(() => import('./components/coordinator/CoordinatorStudents'));
 const CoordinatorFeedback = lazy(() => import('./components/coordinator/CoordinatorFeedback'));
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
+const AdminApprovals = lazy(() => import('./components/admin/AdminApprovals'));
 const UserManagement = lazy(() => import('./components/admin/UserManagement'));
 const AdminDefaulters = lazy(() => import('./components/admin/AdminDefaulters'));
 const QrGenerator = lazy(() => import('./components/faculty/QrGenerator'));
@@ -126,6 +127,7 @@ const App = () => (
                 >
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="approvals" element={<AdminApprovals />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="defaulters" element={<AdminDefaulters />} />
                 </Route>

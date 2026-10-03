@@ -13,6 +13,7 @@ const StudentRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submittedUser, setSubmittedUser] = useState(null);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -30,8 +31,12 @@ const StudentRegister = () => {
     setLoading(true);
     setError('');
     try {
-      await register(form);
-      navigate('/student/dashboard', { replace: true });
+      const result = await register(form);
+      if (result?.pendingApproval) {
+        setSubmittedUser(result.user || form);
+      } else {
+        navigate('/student/dashboard', { replace: true });
+      }
     } catch (err) {
       const msg = err.response?.data?.message || 'Registration failed';
       const details = err.response?.data?.errors?.map((e) => e.msg).join('; ');
@@ -40,6 +45,135 @@ const StudentRegister = () => {
       setLoading(false);
     }
   };
+
+  if (submittedUser) {
+    return (
+      <AuthLayout pageType="student">
+        <div className="auth-card" style={{ maxWidth: '520px', textAlign: 'center' }}>
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              background: '#FEF3C7',
+              color: '#D97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '36px' }}>
+              hourglass_top
+            </span>
+          </div>
+
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px' }}>
+            Registration Submitted!
+          </h1>
+          <p style={{ color: '#64748B', fontSize: '0.925rem', marginBottom: '24px', lineHeight: 1.5 }}>
+            Your student account is pending administrator approval for security verification.
+          </p>
+
+          <div
+            style={{
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              textAlign: 'left',
+              marginBottom: '24px',
+              fontSize: '0.875rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ color: '#64748B' }}>Full Name</span>
+              <span style={{ fontWeight: 600, color: '#1E293B' }}>{submittedUser.name}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ color: '#64748B' }}>Email</span>
+              <span style={{ fontWeight: 600, color: '#1E293B' }}>{submittedUser.email}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ color: '#64748B' }}>Program & Section</span>
+              <span style={{ fontWeight: 600, color: '#1E293B' }}>
+                {submittedUser.branch} - {submittedUser.className} ({submittedUser.section})
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#64748B' }}>Approval Status</span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: '#FEF3C7',
+                  color: '#92400E',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  padding: '4px 10px',
+                  borderRadius: '999px',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+                  schedule
+                </span>
+                Pending Admin Review
+              </span>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: '#EFF6FF',
+              border: '1px solid #BFDBFE',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              marginBottom: '24px',
+              fontSize: '0.825rem',
+              color: '#1E40AF',
+              lineHeight: 1.5,
+              textAlign: 'left',
+              display: 'flex',
+              gap: '10px',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', flexShrink: 0 }}>
+              shield
+            </span>
+            <div>
+              Once an administrator approves your account, you will be able to sign in with your email and password.
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Link to="/login" className="btn btn--primary btn--full" style={{ justifyContent: 'center' }}>
+              Go to Login
+            </Link>
+            <button
+              type="button"
+              className="btn btn--secondary btn--full"
+              style={{ justifyContent: 'center' }}
+              onClick={() => {
+                setSubmittedUser(null);
+                setForm({
+                  name: '',
+                  email: '',
+                  password: '',
+                  role: 'student',
+                  branch: '',
+                  className: '',
+                  section: '',
+                });
+              }}
+            >
+              Register Another Account
+            </button>
+          </div>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout pageType="student">

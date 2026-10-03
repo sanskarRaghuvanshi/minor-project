@@ -18,20 +18,24 @@ import logger from '../config/logger.js';
 export const getStudentsValidations = [
   query('branch').optional().trim(),
   query('className').optional().trim(),
+  query('section').optional().trim(),
   query('page').optional().isInt({ min: 1 }).toInt(),
   query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
   query('search').optional().trim(),
 ];
 
 export const getStudents = catchAsync(async (req, res) => {
-  const { branch, className, search } = req.query;
+  const branch = req.query.branch || req.user.branch;
+  const className = req.query.className || req.user.className;
+  const section = req.query.section !== undefined ? req.query.section : req.user.section;
+  const { search } = req.query;
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 20;
 
   const query = { role: 'student', isActive: true };
   if (branch) query.branch = branch;
   if (className) query.className = className;
-  if (req.user.section) query.section = req.user.section;
+  if (section) query.section = section;
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: 'i' } },
@@ -170,14 +174,17 @@ export const getDefaulters = catchAsync(async (req, res) => {
   const subject = req.query.subject || null;
   const search = req.query.search || null;
   const threshold = parseFloat(req.query.threshold) || 75;
+  const branch = req.query.branch || req.user.branch;
+  const className = req.query.className || req.user.className;
+  const section = req.query.section !== undefined ? req.query.section : req.user.section;
 
   const { records, meta } = await getDefaulterList({
     subject,
     search,
     threshold,
-    className: req.user.className,
-    branch: req.user.branch,
-    section: req.user.section,
+    className,
+    branch,
+    section,
     page,
     limit,
   });
@@ -350,13 +357,14 @@ export const getFeedbackHistoryValidations = [
 
 export const getDashboardStats = catchAsync(async (req, res) => {
   const faculty = req.user;
-  const branch = faculty.branch;
-  const className = faculty.className;
+  const branch = req.query.branch || faculty.branch;
+  const className = req.query.className || faculty.className;
+  const section = req.query.section !== undefined ? req.query.section : faculty.section;
 
   const studentQuery = { role: 'student', isActive: true };
   if (branch) studentQuery.branch = branch;
   if (className) studentQuery.className = className;
-  if (faculty.section) studentQuery.section = faculty.section;
+  if (section) studentQuery.section = section;
 
   const students = await User.find(studentQuery).select('_id name').lean();
   const totalStudents = students.length;

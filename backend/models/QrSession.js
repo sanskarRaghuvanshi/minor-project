@@ -45,6 +45,38 @@ const qrSessionSchema = new Schema(
       trim: true,
       default: '',
     },
+    slotNumber: {
+      type: Number,
+      min: 1,
+      max: 8,
+      default: 1,
+    },
+    timeSlot: {
+      type: String,
+      default: '09:45 - 10:35',
+    },
+    room: {
+      type: String,
+      default: 'B05',
+    },
+    location: {
+      lat: {
+        type: Number,
+        default: null,
+      },
+      lng: {
+        type: Number,
+        default: null,
+      },
+      radius: {
+        type: Number,
+        default: 50, // default 50 meters
+      },
+    },
+    geoFencingEnabled: {
+      type: Boolean,
+      default: false,
+    },
     scannedStudents: [
       {
         student: {

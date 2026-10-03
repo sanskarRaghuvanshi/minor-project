@@ -21,6 +21,7 @@ const coordinatorLinks = [
 
 const adminLinks = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: 'grid_view' },
+  { to: '/admin/approvals', label: 'Approvals', icon: 'how_to_reg' },
   { to: '/admin/users', label: 'Users', icon: 'group' },
   { to: '/admin/defaulters', label: 'Defaulters', icon: 'warning' },
 ];
@@ -164,18 +165,24 @@ const Sidebar = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => { navigate('/faculty/settings'); setIsOpen(false); }}
-              type="button"
-              title="Settings Terminal"
-              style={{
-                width: '32px', height: '32px', borderRadius: '10px', background: '#FFFFFF',
-                border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#64748B', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s'
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>settings</span>
-            </button>
+            {user?.role !== 'student' && (
+              <button
+                onClick={() => {
+                  const target = user?.role === 'coordinator' ? '/coordinator/dashboard' : '/faculty/settings';
+                  navigate(target);
+                  setIsOpen(false);
+                }}
+                type="button"
+                title="Settings Terminal"
+                style={{
+                  width: '32px', height: '32px', borderRadius: '10px', background: '#FFFFFF',
+                  border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#64748B', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>settings</span>
+              </button>
+            )}
           </div>
 
           <button

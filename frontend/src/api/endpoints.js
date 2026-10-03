@@ -18,6 +18,10 @@ export const ENDPOINTS = {
   },
   ADMIN: {
     DASHBOARD_STATS: `${BASE}/admin/dashboard-stats`,
+    PENDING_APPROVALS: `${BASE}/admin/pending-approvals`,
+    APPROVE_USER: (id) => `${BASE}/admin/approve-user/${id}`,
+    REJECT_USER: (id) => `${BASE}/admin/reject-user/${id}`,
+    BULK_APPROVE: `${BASE}/admin/bulk-approve`,
     USERS: `${BASE}/admin/users`,
     TOGGLE_USER_STATUS: (id) => `${BASE}/admin/users/${id}/status`,
     BRANCHES: `${BASE}/admin/branches`,
