@@ -66,11 +66,34 @@ const Defaulters = () => {
   const sendAlert = async (student) => {
     setSending(student._id);
     try {
-      await axiosInstance.post(ENDPOINTS.FACULTY.SEND_ALERT, { studentIds: [student._id] });
+      const payload = { studentIds: [student._id] };
+      if (subject) payload.subject = subject;
+      await axiosInstance.post(ENDPOINTS.FACULTY.NOTIFY_DEFAULTERS, payload);
       showToast(`Notice dispatched for ${student.name}`);
       addToast?.(`Alert sent to ${student.name}`, 'success');
-    } catch {
-      showToast('Failed to send notice');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to send notice';
+      showToast(msg);
+      addToast?.(msg, 'error');
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const notifyAll = async () => {
+    if (!data.length) return;
+    setSending('all');
+    try {
+      const payload = { studentIds: data.map((s) => s._id) };
+      if (subject) payload.subject = subject;
+      const { data: res } = await axiosInstance.post(ENDPOINTS.FACULTY.NOTIFY_DEFAULTERS, payload);
+      const sentCount = res.data?.sent ?? data.length;
+      showToast(`Notices dispatched for ${sentCount} students`);
+      addToast?.(`Alerts sent to ${sentCount} defaulter(s)`, 'success');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to send notices';
+      showToast(msg);
+      addToast?.(msg, 'error');
     } finally {
       setSending(null);
     }
@@ -106,16 +129,20 @@ const Defaulters = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            onClick={() => { data.forEach((s) => sendAlert(s)); }}
+            onClick={notifyAll}
+            disabled={sending === 'all' || !data.length}
             style={{
               display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px',
               borderRadius: '12px', background: '#2563EB', color: '#fff',
-              border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
-              boxShadow: '0 1px 3px rgba(37,99,235,0.3)'
+              border: 'none', cursor: data.length ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: 600,
+              boxShadow: '0 1px 3px rgba(37,99,235,0.3)',
+              opacity: sending === 'all' || !data.length ? 0.6 : 1,
             }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>send</span>
-            Notify All
+            <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>
+              {sending === 'all' ? 'hourglass_top' : 'send'}
+            </span>
+            {sending === 'all' ? 'Sending All...' : 'Notify All'}
           </button>
         </div>
       </div>

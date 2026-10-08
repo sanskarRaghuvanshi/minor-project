@@ -134,7 +134,8 @@ const QrGenerator = () => {
         section: activeClass.section !== undefined ? activeClass.section : user?.section,
       };
 
-      if (geoEnabled && location?.lat != null && location?.lng != null) {
+      const isCoarse = (location?.accuracy || 0) > 500;
+      if (geoEnabled && location?.lat != null && location?.lng != null && !isCoarse) {
         payload.lat = location.lat;
         payload.lng = location.lng;
       }
@@ -146,6 +147,8 @@ const QrGenerator = () => {
       addToast?.(
         data.data?.session?.geoFencingEnabled
           ? `QR generated for ${effectiveRoom} with 50m Geo-Fence!`
+          : isCoarse && geoEnabled
+          ? `QR generated! (Geo-fence auto-relaxed for coarse laptop/hotspot location)`
           : 'QR session generated successfully!',
         'success',
       );
@@ -261,72 +264,128 @@ const QrGenerator = () => {
             Configure New QR Session
           </h3>
 
-          {/* Geo-fencing Status Indicator */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 12px',
-              borderRadius: '10px',
-              background:
-                locStatus === 'ready' && geoEnabled
-                  ? '#ECFDF5'
-                  : locStatus === 'detecting'
-                  ? '#FEF3C7'
-                  : '#F1F5F9',
-              border: `1px solid ${
-                locStatus === 'ready' && geoEnabled
-                  ? '#BBF7D0'
-                  : locStatus === 'detecting'
-                  ? '#FDE68A'
-                  : '#E2E8F0'
-              }`,
-              fontSize: '11px',
-              fontWeight: 700,
-              color:
-                locStatus === 'ready' && geoEnabled
-                  ? '#059669'
-                  : locStatus === 'detecting'
-                  ? '#D97706'
-                  : '#64748B',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: '16px', color: locStatus === 'ready' && geoEnabled ? '#059669' : '#64748B' }}
+          {/* Geo-fencing Status Indicator & Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {(() => {
+              const isCoarse = (location?.accuracy || 0) > 500;
+              const isAccurate = locStatus === 'ready' && geoEnabled && !isCoarse;
+              const isCoarseActive = locStatus === 'ready' && geoEnabled && isCoarse;
+
+              return (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    background: isAccurate
+                      ? '#ECFDF5'
+                      : isCoarseActive
+                      ? '#FEF3C7'
+                      : locStatus === 'detecting'
+                      ? '#EFF6FF'
+                      : '#F1F5F9',
+                    border: `1px solid ${
+                      isAccurate
+                        ? '#BBF7D0'
+                        : isCoarseActive
+                        ? '#FDE68A'
+                        : locStatus === 'detecting'
+                        ? '#BFDBFE'
+                        : '#E2E8F0'
+                    }`,
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: isAccurate
+                      ? '#059669'
+                      : isCoarseActive
+                      ? '#D97706'
+                      : locStatus === 'detecting'
+                      ? '#2563EB'
+                      : '#64748B',
+                  }}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize: '16px',
+                      color: isAccurate
+                        ? '#059669'
+                        : isCoarseActive
+                        ? '#D97706'
+                        : locStatus === 'detecting'
+                        ? '#2563EB'
+                        : '#64748B',
+                    }}
+                  >
+                    {isAccurate
+                      ? 'pin_drop'
+                      : isCoarseActive
+                      ? 'warning'
+                      : locStatus === 'detecting'
+                      ? 'sync'
+                      : 'location_off'}
+                  </span>
+                  <span>
+                    {isAccurate
+                      ? `GPS Active (50m Radius • ±${location?.accuracy || 0}m)`
+                      : isCoarseActive
+                      ? `Coarse Location (±${Math.round((location?.accuracy || 0) / 1000)}km) • Geo-fence Auto-Relaxed`
+                      : locStatus === 'detecting'
+                      ? 'Acquiring GPS...'
+                      : locStatus === 'denied'
+                      ? 'Location Blocked in Browser'
+                      : 'Geo-fencing Off'}
+                  </span>
+                  {locStatus !== 'detecting' && (
+                    <button
+                      type="button"
+                      onClick={acquireLocation}
+                      title="Refresh GPS location"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: '#2563EB',
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+                        refresh
+                      </span>
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Manual Geo-fencing Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setGeoEnabled((prev) => !prev)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '10px',
+                background: geoEnabled ? '#EFF6FF' : '#F8FAFC',
+                border: `1px solid ${geoEnabled ? '#BFDBFE' : '#E2E8F0'}`,
+                color: geoEnabled ? '#1D4ED8' : '#64748B',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+              title="Click to toggle 50m classroom Geo-Fencing enforcement"
             >
-              {locStatus === 'ready' && geoEnabled ? 'pin_drop' : 'location_searching'}
-            </span>
-            <span>
-              {locStatus === 'ready' && geoEnabled
-                ? `GPS Active (50m Radius • ±${location?.accuracy || 0}m)`
-                : locStatus === 'detecting'
-                ? 'Acquiring GPS...'
-                : locStatus === 'denied'
-                ? 'Location Denied (Geo-fence disabled)'
-                : 'Geo-fencing Off'}
-            </span>
-            {locStatus !== 'detecting' && (
-              <button
-                type="button"
-                onClick={acquireLocation}
-                title="Refresh GPS location"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#2563EB',
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
-                  refresh
-                </span>
-              </button>
-            )}
+              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+                {geoEnabled ? 'check_circle' : 'cancel'}
+              </span>
+              Geo-Fence: {geoEnabled ? 'ON' : 'OFF'}
+            </button>
           </div>
         </div>
 

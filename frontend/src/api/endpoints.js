@@ -41,6 +41,7 @@ export const ENDPOINTS = {
     ATTENDANCE_BY_DATE_SUBJECT: (date, subject) => `${BASE}/faculty/attendance/${date}/${subject}`,
     DEFAULTERS: `${BASE}/faculty/defaulters`,
     NOTIFY_DEFAULTERS: `${BASE}/faculty/notify-defaulters`,
+    SEND_ALERT: `${BASE}/faculty/notify-defaulters`,
     FEEDBACK: `${BASE}/faculty/feedback`,
     FEEDBACK_HISTORY: `${BASE}/faculty/feedback-history`,
     DASHBOARD_STATS: `${BASE}/faculty/dashboard-stats`,
