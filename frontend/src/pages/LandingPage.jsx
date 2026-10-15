@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { QRCodeSVG } from 'qrcode.react';
 import Logo from '../components/common/Logo';
 import './LandingPage.css';
 
 const LandingPage = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('home');
 
   if (user) {
     if (user.role === 'faculty') return <Navigate to="/faculty/dashboard" replace />;
@@ -14,140 +17,269 @@ const LandingPage = () => {
   }
 
   return (
-    <div className="smartattend-landing">
-      {/* Background Decorative Pattern */}
-      <div className="landing-bg-grid" aria-hidden="true" />
+    <div className="attendiq-landing">
+      {/* ===== Top Navigation Bar ===== */}
+      <header className="attendiq-header">
+        <div className="attendiq-header__container">
+          {/* Brand Logo */}
+          <Link to="/" className="attendiq-brand">
+            <Logo size={38} tagline="SMART ATTENDANCE SYSTEM" />
+          </Link>
 
-      {/* Top Navigation */}
-      <header className="smartattend-nav-wrapper">
-        <nav className="smartattend-nav">
-          <div className="smartattend-brand">
-            <Logo size={32} />
-          </div>
+          {/* Center Navigation Links */}
+          <nav className="attendiq-nav">
+            <a
+              href="#home"
+              className={`attendiq-nav__link ${activeTab === 'home' ? 'attendiq-nav__link--active' : ''}`}
+              onClick={() => setActiveTab('home')}
+            >
+              Home
+            </a>
+            <a
+              href="#features"
+              className={`attendiq-nav__link ${activeTab === 'features' ? 'attendiq-nav__link--active' : ''}`}
+              onClick={() => setActiveTab('features')}
+            >
+              Features
+            </a>
+            <a
+              href="#about"
+              className={`attendiq-nav__link ${activeTab === 'about' ? 'attendiq-nav__link--active' : ''}`}
+              onClick={() => setActiveTab('about')}
+            >
+              About
+            </a>
+          </nav>
 
-          <div className="smartattend-nav-links">
-            <a href="#home" className="smartattend-nav-link active">Home</a>
-            <a href="#features" className="smartattend-nav-link">Features</a>
-            <a href="#about" className="smartattend-nav-link">About</a>
-          </div>
-
-          <div className="smartattend-nav-actions">
-            <button className="icon-btn" title="Help" type="button" aria-label="Help">
-              <span className="material-symbols-outlined">help</span>
+          {/* Right Action Buttons */}
+          <div className="attendiq-header__actions">
+            <button
+              type="button"
+              className="attendiq-theme-toggle"
+              title="Light theme active"
+              aria-label="Theme toggle"
+            >
+              <span className="material-symbols-outlined">wb_sunny</span>
             </button>
-            <Link to="/login" className="btn-contact-sales">
+
+            <Link to="/login" className="attendiq-btn attendiq-btn--outline">
               Log In
             </Link>
+
+            <Link to="/register/student" className="attendiq-btn attendiq-btn--primary">
+              Sign Up <span className="attendiq-btn__arrow">→</span>
+            </Link>
           </div>
-        </nav>
+        </div>
       </header>
 
-      {/* Main Content */}
-      <main className="smartattend-main" id="home">
-        <section className="smartattend-hero">
-          {/* Left Column: Copy & Bento CTAs */}
-          <div className="hero-left-column">
-            <div className="hero-badge">NEXT GENERATION SYSTEM</div>
-            <h1 className="hero-heading">Attendance. Reimagined.</h1>
-            <p className="hero-description">
-              Secure, seamless, and scalable attendance tracking designed for modern
-              campuses and enterprise environments. Reduce administrative overhead
-              with real-time analytics.
+      {/* ===== Hero Canvas Section ===== */}
+      <main className="attendiq-hero-section" id="home">
+        <div className="attendiq-hero-container">
+          {/* ===== Left Column: Copy & Actions ===== */}
+          <div className="attendiq-hero__content">
+            {/* Pill Eyebrow */}
+            <div className="attendiq-eyebrow">
+              <span className="attendiq-eyebrow__dash" aria-hidden="true">—</span>
+              <span className="attendiq-eyebrow__text">SMART ATTENDANCE SYSTEM</span>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="attendiq-hero__title">
+              Attendance<br />
+              Made <span className="attendiq-hero__title-accent">Simple.</span>
+            </h1>
+
+            {/* Description */}
+            <p className="attendiq-hero__description">
+              A secure and efficient attendance management system for modern campuses.
+              Simplify tracking, reduce administrative work, and get real-time insights.
             </p>
 
-            {/* Bento Style Portal Cards */}
-            <div className="bento-portal-grid">
-              {/* Faculty Portal */}
-              <Link to="/login" className="bento-card group">
-                <div className="bento-icon-wrapper faculty-icon">
-                  <span className="material-symbols-outlined">school</span>
-                </div>
-                <h3 className="bento-card-title">Faculty Portal</h3>
-                <span className="bento-card-subtitle">Manage classes &amp; sessions</span>
+            {/* CTA Buttons */}
+            <div className="attendiq-hero__cta-group">
+              <Link to="/login" className="attendiq-cta attendiq-cta--primary">
+                Log In <span className="attendiq-cta__arrow">→</span>
               </Link>
+              <Link to="/register/student" className="attendiq-cta attendiq-cta--secondary">
+                Sign Up
+              </Link>
+            </div>
 
-              {/* Student Portal */}
-              <Link to="/login" className="bento-card group">
-                <div className="bento-icon-wrapper student-icon">
-                  <span className="material-symbols-outlined">badge</span>
+            {/* Feature Highlights Row */}
+            <div className="attendiq-features-row">
+              {/* Feature 1: Secure */}
+              <div className="attendiq-feature-item">
+                <div className="attendiq-feature-icon attendiq-feature-icon--blue">
+                  <span className="material-symbols-outlined">shield</span>
                 </div>
-                <h3 className="bento-card-title">Student Portal</h3>
-                <span className="bento-card-subtitle">View records &amp; check-in</span>
-              </Link>
+                <div className="attendiq-feature-text">
+                  <h4 className="attendiq-feature-title">Secure</h4>
+                  <p className="attendiq-feature-sub">Your data is safe with us</p>
+                </div>
+              </div>
 
-              {/* Admin Access */}
-              <Link to="/login" className="bento-card group">
-                <div className="bento-icon-wrapper admin-icon">
-                  <span className="material-symbols-outlined">admin_panel_settings</span>
+              {/* Feature 2: Real-time */}
+              <div className="attendiq-feature-item">
+                <div className="attendiq-feature-icon attendiq-feature-icon--purple">
+                  <span className="material-symbols-outlined">bolt</span>
                 </div>
-                <h3 className="bento-card-title">Admin Access</h3>
-                <span className="bento-card-subtitle">System configuration</span>
-              </Link>
+                <div className="attendiq-feature-text">
+                  <h4 className="attendiq-feature-title">Real-time</h4>
+                  <p className="attendiq-feature-sub">Instant attendance tracking</p>
+                </div>
+              </div>
+
+              {/* Feature 3: Insightful */}
+              <div className="attendiq-feature-item">
+                <div className="attendiq-feature-icon attendiq-feature-icon--green">
+                  <span className="material-symbols-outlined">bar_chart</span>
+                </div>
+                <div className="attendiq-feature-text">
+                  <h4 className="attendiq-feature-title">Insightful</h4>
+                  <p className="attendiq-feature-sub">Data-driven decisions</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Right Column: Classroom Graphic & Floating Live Session Card */}
-          <div className="hero-right-column">
-            {/* Classroom Visual Banner */}
-            <div className="classroom-image-card">
+          {/* ===== Right Column: Curved Classroom Visual & Phone Mockup ===== */}
+          <div className="attendiq-hero__visual">
+            {/* Background Curved Classroom Mask Container */}
+            <div className="attendiq-visual-backdrop">
               <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMzO9KqQoeIURXP_Ueu-Dr5QmVfFjTZh0L7GJnfc95icGbJMc5l1PHMwlfYpOTnafX4vRR_EMHxyqihVSsvHvaWkLkiA5hn5Q_JOb_HNQyEqRZt0ZYDaRpyDXr2nN6vYT2bp0egyuRraJlLT2-B51pkt1opoeU4pbxQroseTxA6Jn7dFM1NjQBwnYIL2D3gRNjtv9o3Q69XY58wtn1ZwfxKX0WOz-AvYYIqQqdMjCLv0cFxC01aXU5"
-                alt="Modern academic lecture hall with natural light"
-                className="classroom-img"
+                src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1600&q=80"
+                alt="Modern bright university classroom"
+                className="attendiq-classroom-photo"
               />
-              <div className="classroom-gradient-overlay" />
+              <div className="attendiq-backdrop-glow-border" aria-hidden="true" />
             </div>
 
-            {/* Floating Glassmorphic Live Session Card */}
-            <div className="floating-live-card">
-              {/* Header */}
-              <div className="live-card-header">
-                <div className="live-status-pill">
-                  <span className="live-pulsing-dot" />
-                  <span className="live-status-label">Live Session</span>
-                </div>
-                <span className="live-course-name">CS 101 - Intro to Programming</span>
-              </div>
+            {/* Hand-drawn Annotation: "Just Scan and Attend" with Curved Arrow */}
+            <div className="attendiq-annotation">
+              <span className="attendiq-annotation__text">
+                Just Scan<br />and Attend
+              </span>
+              <svg
+                className="attendiq-annotation__arrow"
+                width="84"
+                height="60"
+                viewBox="0 0 84 60"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 8 C 20 28, 45 46, 74 38"
+                  stroke="#1E50DE"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeDasharray="none"
+                />
+                <path
+                  d="M62 30 L 76 38 L 68 49"
+                  stroke="#1E50DE"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
 
-              {/* QR Animation Container */}
-              <div className="live-qr-viewport">
-                <div className="mock-qr-matrix">
-                  <div className="qr-grid-pattern">
-                    <div className="qr-cell filled" />
-                    <div className="qr-cell filled" />
-                    <div className="qr-cell filled span-2" />
-                    <div className="qr-cell filled span-2" />
-                    <div className="qr-cell light" />
-                    <div className="qr-cell filled" />
-                    <div className="qr-cell filled" />
-                    <div className="qr-cell light span-2" />
-                    <div className="qr-cell filled" />
-                    <div className="qr-cell filled span-2" />
-                    <div className="qr-cell filled" />
-                    <div className="qr-cell filled" />
+            {/* Smartphone 3D Mockup */}
+            <div className="attendiq-phone-mockup">
+              {/* Outer Phone Frame */}
+              <div className="attendiq-phone-chassis">
+                {/* Dynamic Island Pill */}
+                <div className="attendiq-phone-notch">
+                  <span className="attendiq-notch-lens" />
+                </div>
+
+                {/* Inside Screen Content */}
+                <div className="attendiq-phone-screen">
+                  {/* Top Scan Bar */}
+                  <div className="attendiq-phone-header">
+                    <span className="material-symbols-outlined attendiq-phone-icon">
+                      chevron_left
+                    </span>
+                    <span className="attendiq-phone-title">Scan QR Code</span>
+                    <span className="material-symbols-outlined attendiq-phone-icon">
+                      bolt
+                    </span>
                   </div>
-                  {/* Glowing Laser Scan Bar */}
-                  <div className="qr-scanning-laser" />
+
+                  {/* QR Code Viewfinder Box */}
+                  <div className="attendiq-viewfinder-container">
+                    <div className="attendiq-viewfinder">
+                      {/* 4 Cyan Corner Brackets */}
+                      <span className="attendiq-corner attendiq-corner--tl" />
+                      <span className="attendiq-corner attendiq-corner--tr" />
+                      <span className="attendiq-corner attendiq-corner--bl" />
+                      <span className="attendiq-corner attendiq-corner--br" />
+
+                      {/* Animated Neon Laser Scan Beam */}
+                      <div className="attendiq-laser-beam" />
+
+                      {/* Real crisp QR code */}
+                      <div className="attendiq-qr-inner">
+                        <QRCodeSVG
+                          value="https://attendiq.edu/session/live-verify-token-2026"
+                          size={136}
+                          level="H"
+                          fgColor="#0F172A"
+                          bgColor="#FFFFFF"
+                          includeMargin={false}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Status Underneath Viewfinder */}
+                  <div className="attendiq-phone-footer">
+                    <div className="attendiq-phone-status-title">Scanning...</div>
+                    <div className="attendiq-phone-status-sub">Marking your attendance</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Footer Progress & Statistics */}
-              <div className="live-card-footer">
-                <div className="progress-label-row">
-                  <span className="progress-caption">Attendance Rate</span>
-                  <span className="progress-percentage">87%</span>
-                </div>
-                <div className="progress-bar-track">
-                  <div className="progress-bar-fill" style={{ width: '87%' }} />
-                </div>
-                <div className="progress-details-row">
-                  <span className="detail-meta">142/165 Students</span>
-                  <span className="detail-meta">Ends in 05:23</span>
-                </div>
-              </div>
+              {/* Phone Desk Shadow & Reflection */}
+              <div className="attendiq-phone-shadow" aria-hidden="true" />
+            </div>
+
+            {/* Realistic Bottom Foreground Plant Leaf Decor */}
+            <div className="attendiq-plant-decor" aria-hidden="true">
+              <svg width="220" height="180" viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M-30 180 C 10 140, 50 110, 85 90 C 110 75, 125 50, 105 30 C 80 8, 30 50, 0 110 Z"
+                  fill="url(#leafGrad1)"
+                  opacity="0.88"
+                />
+                <path
+                  d="M-40 180 C 30 150, 80 130, 140 120 C 175 114, 185 90, 160 75 C 130 55, 75 95, 20 150 Z"
+                  fill="url(#leafGrad2)"
+                  opacity="0.75"
+                />
+                <path
+                  d="M10 180 C 60 160, 110 150, 170 155 C 195 157, 205 140, 185 130 C 155 115, 100 135, 45 170 Z"
+                  fill="url(#leafGrad1)"
+                  opacity="0.6"
+                />
+                <defs>
+                  <linearGradient id="leafGrad1" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#14532D" />
+                    <stop offset="50%" stopColor="#16A34A" />
+                    <stop offset="100%" stopColor="#4ADE80" />
+                  </linearGradient>
+                  <linearGradient id="leafGrad2" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#064E3B" />
+                    <stop offset="60%" stopColor="#059669" />
+                    <stop offset="100%" stopColor="#34D399" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
           </div>
-        </section>
+        </div>
       </main>
     </div>
   );

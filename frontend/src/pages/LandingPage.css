@@ -1,546 +1,835 @@
-/* ===== Stitch AI Exact Landing Page Styles ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* ===== AttendIQ Modern Exact Landing Page Styles ===== */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 :root {
-  --sa-primary: #003594;
-  --sa-primary-container: #004ac6;
-  --sa-on-primary: #ffffff;
-  --sa-on-primary-container: #b8c8ff;
-  --sa-primary-fixed: #dbe1ff;
-  --sa-secondary-container: #d4e3ff;
-  --sa-on-secondary-container: #56657c;
-  --sa-tertiary-container: #943700;
-  --sa-on-tertiary-container: #ffba9d;
-  --sa-background: #f7f9fb;
-  --sa-surface: #f7f9fb;
-  --sa-surface-card: #ffffff;
-  --sa-surface-variant: #e0e3e5;
-  --sa-surface-container-high: #e6e8ea;
-  --sa-surface-container-low: #f2f4f6;
-  --sa-on-surface: #191c1e;
-  --sa-on-surface-variant: #434654;
-  --sa-outline: #737685;
-  --sa-outline-variant: #c3c6d6;
-  --sa-live-blue: #1b55d0;
+  --aiq-primary: #1e50de;
+  --aiq-primary-hover: #1640b8;
+  --aiq-primary-light: #eff4ff;
+  --aiq-primary-border: #bfdbfe;
+  --aiq-dark: #0b192c;
+  --aiq-slate: #1e293b;
+  --aiq-muted: #64748b;
+  --aiq-light-bg: #f8fafc;
+  --aiq-border-subtle: #e2e8f0;
+  --aiq-cyan-glow: #38bdf8;
 }
 
-.smartattend-landing {
+/* Page Root Canvas */
+.attendiq-landing {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--sa-background);
-  color: var(--sa-on-surface);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #ffffff;
+  color: var(--aiq-dark);
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
   position: relative;
   overflow-x: hidden;
 }
 
-/* ===== Decorative Dot Grid Background ===== */
-.landing-bg-grid {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(var(--sa-outline-variant) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.22;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ===== Header & Top Navigation ===== */
-.smartattend-nav-wrapper {
+/* ========================================================
+   TOP NAVIGATION BAR
+   ======================================================== */
+.attendiq-header {
   position: sticky;
   top: 0;
   z-index: 50;
   width: 100%;
-  background: var(--sa-background);
-  border-bottom: 1px solid var(--sa-outline-variant);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
 }
 
-.smartattend-nav {
-  max-width: 1440px;
+.attendiq-header__container {
+  max-width: 1380px;
   margin: 0 auto;
-  height: 64px;
-  padding: 0 24px;
+  height: 72px;
+  padding: 0 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.smartattend-brand {
-  display: flex;
+/* Brand Logo */
+.attendiq-brand {
+  text-decoration: none;
+  display: inline-flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
-.smartattend-logo-text {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--sa-primary);
+.attendiq-brand .logo__wordmark {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--aiq-dark);
   letter-spacing: -0.02em;
 }
 
-.smartattend-nav-links {
-  display: none;
-  align-items: center;
-  gap: 32px;
+.attendiq-brand .logo__wordmark-accent {
+  color: var(--aiq-primary);
 }
 
-@media (min-width: 768px) {
-  .smartattend-nav-links {
+.attendiq-brand .logo__tagline {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--aiq-muted);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Center Links */
+.attendiq-nav {
+  display: none;
+  align-items: center;
+  gap: 36px;
+}
+
+@media (min-width: 840px) {
+  .attendiq-nav {
     display: flex;
   }
 }
 
-.smartattend-nav-link {
-  font-size: 14px;
-  line-height: 20px;
+.attendiq-nav__link {
+  font-size: 14.5px;
   font-weight: 500;
-  color: var(--sa-on-surface-variant);
+  color: #475569;
   text-decoration: none;
-  transition: color 0.15s ease;
-  padding-bottom: 4px;
+  transition: all 0.18s ease;
+  position: relative;
+  padding: 6px 2px;
 }
 
-.smartattend-nav-link:hover {
-  color: var(--sa-primary);
+.attendiq-nav__link:hover {
+  color: var(--aiq-primary);
 }
 
-.smartattend-nav-link.active {
-  color: var(--sa-primary);
+.attendiq-nav__link--active {
+  color: var(--aiq-primary);
   font-weight: 600;
-  border-bottom: 2px solid var(--sa-primary);
 }
 
-.smartattend-nav-actions {
+.attendiq-nav__link--active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  border-radius: 999px;
+  background-color: var(--aiq-primary);
+}
+
+/* Right Action Buttons */
+.attendiq-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.attendiq-theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #1e50de;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.attendiq-theme-toggle:hover {
+  background: var(--aiq-primary-light);
+  border-color: var(--aiq-primary-border);
+}
+
+.attendiq-theme-toggle .material-symbols-outlined {
+  font-size: 21px;
+}
+
+/* Buttons */
+.attendiq-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.attendiq-btn--outline {
+  background: transparent;
+  color: var(--aiq-primary);
+  border: 1.5px solid var(--aiq-primary);
+}
+
+.attendiq-btn--outline:hover {
+  background: rgba(30, 80, 222, 0.06);
+  transform: translateY(-1px);
+}
+
+.attendiq-btn--primary {
+  background: var(--aiq-primary);
+  color: #ffffff;
+  border: 1.5px solid var(--aiq-primary);
+  box-shadow: 0 4px 12px rgba(30, 80, 222, 0.28);
+  gap: 6px;
+}
+
+.attendiq-btn--primary:hover {
+  background: var(--aiq-primary-hover);
+  border-color: var(--aiq-primary-hover);
+  box-shadow: 0 6px 18px rgba(30, 80, 222, 0.38);
+  transform: translateY(-1px);
+}
+
+.attendiq-btn__arrow {
+  font-size: 15px;
+  transition: transform 0.2s ease;
+}
+
+.attendiq-btn--primary:hover .attendiq-btn__arrow {
+  transform: translateX(3px);
+}
+
+/* ========================================================
+   HERO CANVAS SECTION
+   ======================================================== */
+.attendiq-hero-section {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 40px 0 60px 0;
+  overflow: hidden;
+}
+
+.attendiq-hero-container {
+  max-width: 1380px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 48px;
+  position: relative;
+  z-index: 10;
+}
+
+@media (min-width: 1040px) {
+  .attendiq-hero-container {
+    grid-template-columns: 1.08fr 0.92fr;
+    gap: 32px;
+    padding-top: 16px;
+    padding-bottom: 24px;
+  }
+}
+
+/* ========================================================
+   LEFT COLUMN: COPY & CALL-TO-ACTIONS
+   ======================================================== */
+.attendiq-hero__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  z-index: 15;
+}
+
+/* Eyebrow Pill */
+.attendiq-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--aiq-primary-light);
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  margin-bottom: 24px;
+}
+
+.attendiq-eyebrow__dash {
+  color: var(--aiq-primary);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.attendiq-eyebrow__text {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--aiq-primary);
+  text-transform: uppercase;
+}
+
+/* Big Title */
+.attendiq-hero__title {
+  font-size: 44px;
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--aiq-dark);
+  margin: 0 0 20px 0;
+}
+
+@media (min-width: 640px) {
+  .attendiq-hero__title {
+    font-size: 56px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .attendiq-hero__title {
+    font-size: 64px;
+  }
+}
+
+.attendiq-hero__title-accent {
+  color: var(--aiq-primary);
+  display: inline-block;
+}
+
+/* Description paragraph */
+.attendiq-hero__description {
+  font-size: 16px;
+  line-height: 1.65;
+  color: #475569;
+  max-width: 500px;
+  margin: 0 0 34px 0;
+  font-weight: 400;
+}
+
+/* CTA Group */
+.attendiq-hero__cta-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 48px;
+  flex-wrap: wrap;
+}
+
+.attendiq-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.attendiq-cta--primary {
+  background: var(--aiq-primary);
+  color: #ffffff;
+  border: 1.5px solid var(--aiq-primary);
+  box-shadow: 0 8px 24px -4px rgba(30, 80, 222, 0.38);
+  gap: 8px;
+}
+
+.attendiq-cta--primary:hover {
+  background: var(--aiq-primary-hover);
+  border-color: var(--aiq-primary-hover);
+  box-shadow: 0 12px 28px -4px rgba(30, 80, 222, 0.48);
+  transform: translateY(-2px);
+}
+
+.attendiq-cta__arrow {
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+
+.attendiq-cta--primary:hover .attendiq-cta__arrow {
+  transform: translateX(4px);
+}
+
+.attendiq-cta--secondary {
+  background: #ffffff;
+  color: var(--aiq-primary);
+  border: 1.5px solid var(--aiq-primary-border);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.attendiq-cta--secondary:hover {
+  border-color: var(--aiq-primary);
+  background: rgba(30, 80, 222, 0.04);
+  transform: translateY(-2px);
+}
+
+/* Feature Highlights Row (3 Badges) */
+.attendiq-features-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  width: 100%;
+}
+
+.attendiq-feature-item {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: transparent;
-  border: none;
-  color: var(--sa-on-surface-variant);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.icon-btn:hover {
-  background-color: var(--sa-surface-container-low);
-  color: var(--sa-on-surface);
-}
-
-.btn-contact-sales {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 18px;
-  background-color: var(--sa-primary);
-  color: var(--sa-on-primary);
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.btn-contact-sales:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-}
-
-/* ===== Main Canvas & Hero Section ===== */
-.smartattend-main {
-  flex: 1;
-  position: relative;
-  z-index: 10;
-}
-
-.smartattend-hero {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 48px 24px 80px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 48px;
-}
-
-@media (min-width: 1024px) {
-  .smartattend-hero {
-    flex-direction: row;
-    align-items: center;
-    padding: 72px 32px 120px 32px;
-    gap: 64px;
-  }
-}
-
-/* Left Column */
-.hero-left-column {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  z-index: 10;
-}
-
-@media (min-width: 1024px) {
-  .hero-left-column {
-    width: 50%;
-  }
-}
-
-.hero-badge {
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-  color: var(--sa-primary);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.hero-heading {
-  font-size: 34px;
-  line-height: 42px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: var(--sa-on-surface);
-  margin: 0;
-}
-
-@media (min-width: 768px) {
-  .hero-heading {
-    font-size: 40px;
-    line-height: 48px;
-  }
-}
-
-.hero-description {
-  font-size: 15px;
-  line-height: 24px;
-  color: var(--sa-on-surface-variant);
-  max-width: 560px;
-  margin: 0;
-}
-
-/* Bento Style CTAs */
-.bento-portal-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  margin-top: 12px;
-}
-
-@media (min-width: 640px) {
-  .bento-portal-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.bento-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 20px 16px;
-  background: var(--sa-surface-card);
-  border-radius: 6px;
-  border: 1px solid var(--sa-outline-variant);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  text-decoration: none;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
-}
-
-.bento-card:hover {
-  border-color: var(--sa-primary);
-  background-color: #f1f5ff;
-  box-shadow: 0 6px 16px rgba(0, 53, 148, 0.08);
-  transform: translateY(-2px);
-}
-
-.bento-icon-wrapper {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.attendiq-feature-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
-.bento-icon-wrapper .material-symbols-outlined {
+.attendiq-feature-icon .material-symbols-outlined {
   font-size: 22px;
 }
 
-.faculty-icon {
-  background-color: #e5eeff;
-  color: var(--sa-primary);
+.attendiq-feature-icon--blue {
+  background: #e0edff;
+  color: #1e50de;
 }
 
-.student-icon {
-  background-color: var(--sa-secondary-container);
-  color: #1e3a8a;
+.attendiq-feature-icon--purple {
+  background: #ede9fe;
+  color: #7c3aed;
 }
 
-.admin-icon {
-  background-color: #ffe6db;
-  color: var(--sa-tertiary-container);
+.attendiq-feature-icon--green {
+  background: #dcfce7;
+  color: #16a34a;
 }
 
-.bento-card-title {
-  font-size: 16px;
-  line-height: 22px;
-  font-weight: 600;
-  color: var(--sa-on-surface);
+.attendiq-feature-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.attendiq-feature-title {
   margin: 0;
-  transition: color 0.15s ease;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--aiq-dark);
+  line-height: 1.2;
 }
 
-.bento-card:hover .bento-card-title {
-  color: var(--sa-primary);
+.attendiq-feature-sub {
+  margin: 3px 0 0 0;
+  font-size: 11.5px;
+  color: var(--aiq-muted);
+  line-height: 1.3;
 }
 
-.bento-card-subtitle {
-  font-size: 11px;
-  line-height: 14px;
-  color: var(--sa-on-surface-variant);
-}
-
-/* Right Column: Visuals */
-.hero-right-column {
-  width: 100%;
+/* ========================================================
+   RIGHT COLUMN: VISUAL BACKDROP & PHONE MOCKUP
+   ======================================================== */
+.attendiq-hero__visual {
   position: relative;
-  min-height: 380px;
+  width: 100%;
+  min-height: 520px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-@media (min-width: 1024px) {
-  .hero-right-column {
-    width: 50%;
-    min-height: 480px;
+@media (min-width: 1040px) {
+  .attendiq-hero__visual {
+    min-height: 580px;
   }
 }
 
-.classroom-image-card {
+/* Curved Backdrop with Classroom Photo */
+.attendiq-visual-backdrop {
   position: absolute;
-  inset: 0;
-  border-radius: 16px;
+  top: -20px;
+  right: -80px;
+  bottom: -40px;
+  left: 60px;
+  border-top-left-radius: 360px;
+  border-bottom-left-radius: 360px;
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(195, 198, 214, 0.4);
+  box-shadow: -20px 10px 50px rgba(191, 219, 254, 0.45);
+  border-left: 2px solid rgba(224, 238, 255, 0.9);
+  z-index: 1;
 }
 
-.classroom-img {
+.attendiq-classroom-photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.94;
+  filter: brightness(1.04) contrast(1.02);
+  transform: scale(1.05);
 }
 
-.classroom-gradient-overlay {
+/* Gradient glow layer over the photo */
+.attendiq-backdrop-glow-border {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top right, rgba(247, 249, 251, 0.85) 0%, transparent 60%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(240, 246, 255, 0.3) 30%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
-/* Floating Glassmorphic Live Session Card */
-.floating-live-card {
-  position: relative;
-  z-index: 20;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--sa-outline-variant);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.09);
-  max-width: 340px;
-  width: 100%;
-  transform: translateY(16px);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+/* ========================================================
+   HAND-DRAWN ANNOTATION
+   ======================================================== */
+.attendiq-annotation {
+  position: absolute;
+  top: 18%;
+  left: 6%;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+  animation: floatSubtle 4s ease-in-out infinite;
 }
 
-@media (min-width: 1024px) {
-  .floating-live-card {
-    transform: translate(-32px, 32px);
+.attendiq-annotation__text {
+  font-family: 'Caveat', cursive;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1e50de;
+  line-height: 1.05;
+  text-align: right;
+  transform: rotate(-9deg);
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.attendiq-annotation__arrow {
+  margin-top: 4px;
+  margin-right: -12px;
+  filter: drop-shadow(0 2px 4px rgba(30, 80, 222, 0.2));
+}
+
+@keyframes floatSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
   }
 }
 
-.floating-live-card:hover {
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+/* ========================================================
+   SMARTPHONE 3D MOCKUP
+   ======================================================== */
+.attendiq-phone-mockup {
+  position: relative;
+  z-index: 20;
+  width: 284px;
+  perspective: 1000px;
+  transform: translateY(-8px);
 }
 
-.live-card-header {
+@media (min-width: 1200px) {
+  .attendiq-phone-mockup {
+    width: 300px;
+  }
+}
+
+.attendiq-phone-chassis {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 18.5;
+  background: #0f172a;
+  border-radius: 44px;
+  border: 7px solid #1e293b;
+  box-shadow:
+    0 0 0 1.5px #334155,
+    0 24px 60px -12px rgba(15, 23, 42, 0.42),
+    0 12px 24px -8px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dynamic Island */
+.attendiq-phone-notch {
+  width: 72px;
+  height: 18px;
+  border-radius: 999px;
+  background: #000000;
+  margin: 10px auto 10px auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--sa-outline-variant);
-  padding-bottom: 8px;
+  justify-content: flex-end;
+  padding: 0 8px;
+  z-index: 10;
 }
 
-.live-status-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.live-pulsing-dot {
+.attendiq-notch-lens {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: var(--sa-live-blue);
-  animation: pulse-dot 1.8s ease-in-out infinite;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-@keyframes pulse-dot {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.3); opacity: 0.6; }
+/* Screen Interior */
+.attendiq-phone-screen {
+  flex: 1;
+  background: #0b1120;
+  padding: 8px 16px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #ffffff;
 }
 
-.live-status-label {
-  font-size: 12px;
-  line-height: 16px;
+/* Top bar on phone screen */
+.attendiq-phone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 10px 4px;
+}
+
+.attendiq-phone-title {
+  font-size: 13.5px;
   font-weight: 600;
-  color: var(--sa-on-surface);
+  color: #f1f5f9;
+  letter-spacing: -0.01em;
 }
 
-.live-course-name {
-  font-size: 11px;
-  line-height: 14px;
-  color: var(--sa-on-surface-variant);
+.attendiq-phone-icon {
+  font-size: 19px;
+  color: #94a3b8;
+  cursor: pointer;
 }
 
-/* Mock QR Code Container */
-.live-qr-viewport {
+/* Viewfinder Area */
+.attendiq-viewfinder-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 0;
+  margin: 12px 0 16px 0;
 }
 
-.mock-qr-matrix {
-  width: 124px;
-  height: 124px;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 8px;
-  border: 1px solid var(--sa-outline-variant);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+.attendiq-viewfinder {
   position: relative;
-  overflow: hidden;
+  width: 172px;
+  height: 172px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
 }
 
-.qr-grid-pattern {
+/* 4 Cyan Corner Brackets */
+.attendiq-corner {
   position: absolute;
-  inset: 8px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, 1fr);
-  gap: 3px;
-  opacity: 0.9;
+  width: 22px;
+  height: 22px;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
 }
 
-.qr-cell {
-  border-radius: 2px;
+.attendiq-corner--tl {
+  top: -2px;
+  left: -2px;
+  border-top: 3.5px solid #38bdf8;
+  border-left: 3.5px solid #38bdf8;
+  border-top-left-radius: 8px;
 }
 
-.qr-cell.filled {
-  background-color: var(--sa-primary);
+.attendiq-corner--tr {
+  top: -2px;
+  right: -2px;
+  border-top: 3.5px solid #38bdf8;
+  border-right: 3.5px solid #38bdf8;
+  border-top-right-radius: 8px;
 }
 
-.qr-cell.light {
-  background-color: var(--sa-surface-variant);
+.attendiq-corner--bl {
+  bottom: -2px;
+  left: -2px;
+  border-bottom: 3.5px solid #38bdf8;
+  border-left: 3.5px solid #38bdf8;
+  border-bottom-left-radius: 8px;
 }
 
-.qr-cell.span-2 {
-  grid-column: span 2;
+.attendiq-corner--br {
+  bottom: -2px;
+  right: -2px;
+  border-bottom: 3.5px solid #38bdf8;
+  border-right: 3.5px solid #38bdf8;
+  border-bottom-right-radius: 8px;
 }
 
-/* Scanning Laser Animation */
-.qr-scanning-laser {
+/* Crisp QR Code Container */
+.attendiq-qr-inner {
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* Animated Glowing Cyan Laser Beam */
+.attendiq-laser-beam {
   position: absolute;
-  top: 0;
   left: 0;
-  width: 100%;
-  height: 2px;
-  background: var(--sa-primary);
-  box-shadow: 0 0 10px rgba(0, 53, 148, 0.9);
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #38bdf8 20%,
+    #60a5fa 50%,
+    #38bdf8 80%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 12px #38bdf8,
+    0 0 24px rgba(56, 189, 248, 0.8);
+  border-radius: 999px;
   z-index: 10;
-  animation: laser-scan 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: qrLaserSweep 2.2s ease-in-out infinite alternate;
 }
 
-@keyframes laser-scan {
-  0% { top: 0%; opacity: 0; }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+@keyframes qrLaserSweep {
+  0% {
+    top: 6px;
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 8px);
+    opacity: 0.9;
+  }
 }
 
-/* Live Card Footer & Progress Bar */
-.live-card-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-top: 10px;
-  border-top: 1px solid var(--sa-outline-variant);
+/* Phone Screen Footer */
+.attendiq-phone-footer {
+  text-align: center;
+  padding-bottom: 8px;
 }
 
-.progress-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.progress-caption {
-  font-size: 13px;
-  color: var(--sa-on-surface-variant);
-  font-weight: 500;
-}
-
-.progress-percentage {
-  font-size: 13px;
+.attendiq-phone-status-title {
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--sa-primary);
+  color: #ffffff;
+  letter-spacing: -0.01em;
 }
 
-.progress-bar-track {
-  width: 100%;
-  height: 6px;
-  background-color: var(--sa-surface-container-high);
-  border-radius: 9999px;
-  overflow: hidden;
-  margin: 4px 0;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background-color: var(--sa-primary);
-  border-radius: 9999px;
-  transition: width 0.6s ease;
-}
-
-.progress-details-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 2px;
-}
-
-.detail-meta {
+.attendiq-phone-status-sub {
   font-size: 11px;
-  line-height: 14px;
-  color: var(--sa-on-surface-variant);
+  color: #94a3b8;
+  margin-top: 3px;
+}
+
+/* Contact shadow on the table */
+.attendiq-phone-shadow {
+  position: absolute;
+  bottom: -22px;
+  left: 10%;
+  right: 10%;
+  height: 24px;
+  background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.3) 0%, transparent 75%);
+  filter: blur(6px);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Foreground Plant Leaf Decor */
+.attendiq-plant-decor {
+  position: absolute;
+  bottom: -30px;
+  left: -40px;
+  z-index: 28;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 16px rgba(20, 83, 45, 0.2));
+  opacity: 0.92;
+}
+
+/* ========================================================
+   RESPONSIVE ADAPTATIONS
+   ======================================================== */
+@media (max-width: 1039px) {
+  .attendiq-hero-section {
+    padding: 24px 0 60px 0;
+  }
+
+  .attendiq-hero__content {
+    align-items: center;
+    text-align: center;
+  }
+
+  .attendiq-hero__description {
+    max-width: 540px;
+  }
+
+  .attendiq-hero__cta-group {
+    justify-content: center;
+  }
+
+  .attendiq-features-row {
+    justify-content: center;
+  }
+
+  .attendiq-visual-backdrop {
+    left: -20px;
+    right: -20px;
+    border-radius: 32px;
+  }
+
+  .attendiq-annotation {
+    left: 2%;
+    top: 6%;
+  }
+
+  .attendiq-plant-decor {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .attendiq-header__container {
+    padding: 0 16px;
+  }
+
+  .attendiq-hero-container {
+    padding: 0 16px;
+  }
+
+  .attendiq-hero__title {
+    font-size: 38px;
+  }
+
+  .attendiq-btn--outline {
+    display: none;
+  }
+
+  .attendiq-features-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .attendiq-annotation {
+    display: none;
+  }
 }
