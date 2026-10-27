@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import 'material-symbols/outlined.css';
 import './styles/variables.css';
 import './styles/App.css';
 import './styles/dark-theme.css';

@@ -21,6 +21,7 @@
     "@capacitor/core": "^8.5.3",
     "axios": "^1.6.5",
     "html5-qrcode": "^2.3.8",
+    "material-symbols": "^0.48.2",
     "qrcode.react": "^3.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

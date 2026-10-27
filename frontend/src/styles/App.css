@@ -1683,3 +1683,15 @@ tr:hover { background: var(--surface); }
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+/* Sidebar close button: hidden on desktop, visible on mobile */
+.sidebar-close-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-close-btn {
+    display: flex;
+  }
+}

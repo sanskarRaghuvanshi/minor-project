@@ -73,18 +73,20 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile Toggle Button (hidden on desktop via CSS) */}
-      <button
-        className="sidebar-toggle"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
-        aria-expanded={isOpen}
-        type="button"
-      >
-        <span className="material-symbols-outlined" style={{ color: '#1E293B', fontSize: '22px' }}>
-          {isOpen ? 'close' : 'menu'}
-        </span>
-      </button>
+      {/* Mobile Toggle Button (only when closed) */}
+      {!isOpen && (
+        <button
+          className="sidebar-toggle"
+          onClick={() => setIsOpen(true)}
+          aria-label="Open sidebar"
+          aria-expanded={false}
+          type="button"
+        >
+          <span className="material-symbols-outlined" style={{ color: '#1E293B', fontSize: '22px' }}>
+            menu
+          </span>
+        </button>
+      )}
 
       <aside
         className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}
@@ -98,30 +100,53 @@ const Sidebar = () => {
         }}
       >
         {/* Brand / Logo Header */}
-        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Logo Badge */}
-          <div style={{
-            position: 'relative', width: '42px', height: '42px', borderRadius: '50%',
-            background: '#1E50DE', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', flexShrink: 0, boxShadow: '0 2px 8px rgba(30,80,222,0.3)'
-          }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>school</span>
-            <span style={{
-              position: 'absolute', bottom: '-2px', right: '-2px', width: '15px', height: '15px',
-              borderRadius: '50%', background: '#10B981', border: '2px solid #FFFFFF',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
+        <div style={{
+          padding: '20px 18px 16px', borderBottom: '1px solid #F1F5F9',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+            {/* Logo Badge */}
+            <div style={{
+              position: 'relative', width: '42px', height: '42px', borderRadius: '50%',
+              background: '#1E50DE', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', flexShrink: 0, boxShadow: '0 2px 8px rgba(30,80,222,0.3)'
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '10px', color: '#fff', fontWeight: 800 }}>check</span>
-            </span>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>school</span>
+              <span style={{
+                position: 'absolute', bottom: '-2px', right: '-2px', width: '15px', height: '15px',
+                borderRadius: '50%', background: '#10B981', border: '2px solid #FFFFFF',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '10px', color: '#fff', fontWeight: 800 }}>check</span>
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.02em' }}>AttendIQ</span>
+                <span style={{ padding: '2px 6px', borderRadius: '6px', background: '#D1FAE5', color: '#059669', fontSize: '10px', fontWeight: 800, letterSpacing: '0.04em' }}>LIVE</span>
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 500, color: '#94A3B8', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {roleSubtitle}
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.02em' }}>AttendIQ</span>
-              <span style={{ padding: '2px 6px', borderRadius: '6px', background: '#D1FAE5', color: '#059669', fontSize: '10px', fontWeight: 800, letterSpacing: '0.04em' }}>LIVE</span>
-            </div>
-            <span style={{ fontSize: '11px', fontWeight: 500, color: '#94A3B8', marginTop: '1px' }}>{roleSubtitle}</span>
-          </div>
+          {/* Close button inside sidebar header on mobile */}
+          <button
+            onClick={() => setIsOpen(false)}
+            aria-label="Close sidebar"
+            type="button"
+            className="sidebar-close-btn"
+            style={{
+              width: '32px', height: '32px', borderRadius: '8px',
+              border: '1px solid #E2E8F0', background: '#F8FAFC',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: '#64748B', flexShrink: 0
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+          </button>
         </div>
 
         {/* Navigation Links */}
