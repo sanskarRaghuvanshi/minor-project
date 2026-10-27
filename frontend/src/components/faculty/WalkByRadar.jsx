@@ -5,6 +5,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useToast } from '../common/Toast';
 import { LECTURE_SLOTS, getCurrentSlot } from '../../utils/timetableSlots';
+import { isNativePlatform, startBleRadarScan, stopBleRadarScan } from '../../utils/bleProximity';
 
 const POPULAR_ROOMS = [
   'Room B05',
@@ -61,6 +62,9 @@ const WalkByRadar = () => {
   const [hoveringId, setHoveringId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [autoWalkMode, setAutoWalkMode] = useState(false);
+  const [isNative] = useState(() => isNativePlatform());
+  const [bleScannerActive, setBleScannerActive] = useState(false);
+  const [recentBlePings, setRecentBlePings] = useState([]);
 
   // Poll active session
   const pollIntervalRef = useRef(null);
@@ -142,12 +146,11 @@ const WalkByRadar = () => {
   };
 
   // Hover mark a student
-  const handleHoverMark = async (studentId, studentName) => {
+  const handleHoverMark = useCallback(async (studentId, studentName, measuredDist) => {
     if (!activeSession?.sessionToken) return;
     try {
       setHoveringId(studentId);
-      // Realistic random proximity between 0.15m and 0.45m
-      const proximityMeters = (Math.random() * 0.3 + 0.15).toFixed(2);
+      const proximityMeters = measuredDist || (Math.random() * 0.3 + 0.15).toFixed(2);
 
       const res = await axiosInstance.post(ENDPOINTS.FACULTY.WALKBY_HOVER_MARK, {
         sessionToken: activeSession.sessionToken,
@@ -156,12 +159,11 @@ const WalkByRadar = () => {
       });
 
       if (res.data?.success) {
-        // Trigger subtle tactile feedback if device supports vibration
+        // Purely tactile vibration feedback - ZERO AUDIO
         if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
           navigator.vibrate([60, 40, 60]);
         }
         addToast(`${studentName} auto-marked present (${proximityMeters}m proximity)`, 'success');
-        // Refresh roster
         fetchActiveSession(true);
       }
     } catch (err) {
@@ -170,7 +172,44 @@ const WalkByRadar = () => {
     } finally {
       setHoveringId(null);
     }
-  };
+  }, [activeSession?.sessionToken, addToast, fetchActiveSession]);
+
+  // Native Hardware BLE Scanner Hook
+  useEffect(() => {
+    if (activeSession && activeSession.isActive && isNative) {
+      startBleRadarScan({
+        onDeviceDetected: (dev) => {
+          setRecentBlePings((prev) => {
+            const filtered = prev.filter((d) => d.deviceId !== dev.deviceId);
+            return [dev, ...filtered].slice(0, 6);
+          });
+        },
+        onDeviceHovered: (dev) => {
+          // If nearby device matches an unmarked student in roster
+          const roster = activeSession.roster || [];
+          const matched = roster.find(
+            (s) =>
+              !s.isHovered &&
+              (dev.name?.toLowerCase().includes(s.rollNumber?.toLowerCase()) ||
+               dev.name?.toLowerCase().includes(s.name?.toLowerCase()))
+          );
+          if (matched) {
+            handleHoverMark(matched._id, matched.name, dev.distance);
+          }
+        },
+        onError: (err) => {
+          console.warn('Native BLE Radar scan warning:', err);
+        },
+      }).then((started) => {
+        setBleScannerActive(!!started);
+      });
+    }
+
+    return () => {
+      stopBleRadarScan();
+      setBleScannerActive(false);
+    };
+  }, [activeSession?.isActive, isNative, handleHoverMark]);
 
   // Auto-walk simulation: hovers un-hovered students sequentially
   useEffect(() => {
@@ -189,7 +228,7 @@ const WalkByRadar = () => {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [autoWalkMode, activeSession]);
+  }, [autoWalkMode, activeSession, handleHoverMark, addToast]);
 
   // End & Lock Session
   const handleEndSession = async () => {
@@ -250,7 +289,7 @@ const WalkByRadar = () => {
             <span className="material-symbols-outlined" style={{ fontSize: '26px' }}>radar</span>
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
                 Walk-by Desk Radar
               </h1>
@@ -260,6 +299,14 @@ const WalkByRadar = () => {
                 fontSize: '11px', fontWeight: 700, border: '1px solid #A7F3D0'
               }}>
                 PROXIMITY &lt; 0.5m
+              </span>
+              <span style={{
+                padding: '3px 10px', borderRadius: '20px',
+                background: isNative ? '#EFF6FF' : '#F1F5F9',
+                color: isNative ? '#2563EB' : '#475569',
+                fontSize: '11px', fontWeight: 700, border: isNative ? '1px solid #BFDBFE' : 'none'
+              }}>
+                {isNative ? '📡 NATIVE BLE HARDWARE SCANNER' : '🌐 WEB HYBRID RADAR'}
               </span>
               <span style={{
                 padding: '3px 10px', borderRadius: '20px',
@@ -551,7 +598,7 @@ const WalkByRadar = () => {
               <style>{`@keyframes pulseGlow { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }`}</style>
               <div>
                 <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', fontWeight: 700 }}>
-                  Active Walk-by Proximity Session
+                  Active Walk-by Proximity Session {bleScannerActive ? '• 📡 BLE SCANNING' : ''}
                 </div>
                 <div style={{ fontSize: '20px', fontWeight: 800, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {activeSession.subject}
@@ -700,6 +747,19 @@ const WalkByRadar = () => {
               <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '12px' }}>
                 Center blip: Teacher Scanner • Green dots: Verified desk proximity (&lt; 0.5m)
               </div>
+
+              {/* Recent BLE hardware signals if any */}
+              {recentBlePings.length > 0 && (
+                <div style={{ marginTop: '12px', textAlign: 'left', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '8px' }}>
+                  <div style={{ fontSize: '11px', color: '#38BDF8', fontWeight: 600 }}>Nearby BLE Signals:</div>
+                  {recentBlePings.map((p, i) => (
+                    <div key={i} style={{ fontSize: '10px', color: '#CBD5E1', display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+                      <span>{p.name}</span>
+                      <span>{p.rssi} dBm ({p.distance}m)</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Roster & Hover Desk Actions */}
