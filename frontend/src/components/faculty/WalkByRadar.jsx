@@ -194,14 +194,14 @@ const WalkByRadar = () => {
     const currentSession = activeSessionRef.current;
     if (!currentSession?.sessionToken) return;
 
-    if (isNative && (!measuredDist || Number(measuredDist) > 2.0)) {
-      addToast('Rejected: Proximity must be within desk hover range (< 2.0m).', 'error');
+    if (!measuredDist || Number(measuredDist) <= 0 || Number(measuredDist) > 2.0) {
+      addToast('Cannot mark: Valid measured Bluetooth proximity (< 2.0m) required.', 'error');
       return;
     }
 
     try {
       setHoveringId(studentId);
-      const proximityMeters = measuredDist || (Math.random() * 0.25 + 0.18).toFixed(2);
+      const proximityMeters = Number(measuredDist);
 
       const res = await axiosInstance.post(ENDPOINTS.FACULTY.WALKBY_HOVER_MARK, {
         sessionToken: currentSession.sessionToken,
@@ -252,8 +252,7 @@ const WalkByRadar = () => {
 
         await handleHoverMark(student._id, student.name, sig.distance);
       } else {
-        // Web browser demo: only allowed when testing locally on computer
-        await handleHoverMark(student._id, student.name);
+        addToast('Bluetooth hardware scanner is only available in the native Android app.', 'error');
       }
     } catch (err) {
       console.error('Hover trigger error:', err);
@@ -288,28 +287,20 @@ const WalkByRadar = () => {
             s.rollNumber,
             s.studentIdentifier,
             s.email?.split('@')[0],
-            s.name,
             s._id?.toString(),
             s._id?.toString()?.slice(-6),
           ].filter(Boolean).map((v) => v.toLowerCase().trim());
 
           const devRoll = (dev.studentRoll || '').toLowerCase().trim();
-          const devName = (dev.name || '').toLowerCase().trim();
+          const devName = (dev.name || '').replace('atiq_', '').toLowerCase().trim();
 
-          return sIds.some(
-            (id) =>
-              (devRoll && (devRoll.includes(id) || id.includes(devRoll))) ||
-              (devName && (devName.includes(id) || id.includes(devName)))
-          );
+          // Issue 4: Strict equality match only - never loose includes()
+          return sIds.some((id) => id === devRoll || id === devName);
         });
+
+        // Issue 2: Only mark verified matched student (wrong-device fallback completely removed)
         if (matched) {
           handleHoverMark(matched._id, matched.name, dev.distance);
-        } else if (dev.distance <= 1.8) {
-          // If 1 student is logged in online at desk and signal is detected within 1.8m
-          const onlineUnhovered = roster.filter((s) => !s.isHovered && s.isOnline);
-          if (onlineUnhovered.length === 1) {
-            handleHoverMark(onlineUnhovered[0]._id, onlineUnhovered[0].name, dev.distance);
-          }
         }
       },
       onError: (err) => {
@@ -332,29 +323,7 @@ const WalkByRadar = () => {
     };
   }, [activeSession?.isActive, hoverScannerActive, isNative, startScanner]);
 
-  // Auto-walk simulation: hovers ONLY online students sequentially (Strictly skips offline)
-  useEffect(() => {
-    let timer = null;
-    if (autoWalkMode && activeSession && activeSession.roster) {
-      const nextUnmarkedOnline = activeSession.roster.find((s) => !s.isHovered && s.isOnline);
-      if (nextUnmarkedOnline) {
-        timer = setTimeout(() => {
-          handleHoverMark(nextUnmarkedOnline._id, nextUnmarkedOnline.name);
-        }, 1800);
-      } else {
-        setAutoWalkMode(false);
-        const hasUnmarked = activeSession.roster.some((s) => !s.isHovered);
-        if (hasUnmarked) {
-          addToast('Finished walk. Remaining unlogged students cannot be auto-marked.', 'info');
-        } else {
-          addToast('All online students have been verified!', 'success');
-        }
-      }
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [autoWalkMode, activeSession, handleHoverMark, addToast]);
+  // Auto-walk is purely hardware Bluetooth event-driven. Synthetic timer simulation removed.
 
   // End & Lock Session
   const handleEndSession = async () => {

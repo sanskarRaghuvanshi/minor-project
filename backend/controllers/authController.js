@@ -88,7 +88,7 @@ export const register = catchAsync(async (req, res) => {
     });
   }
 
-  const { name, email, password, role, branch, className, section, subjects, assignedClasses } = req.body;
+  const { name, email, password, role, branch, className, section, subjects, assignedClasses, rollNumber } = req.body;
 
   if (role === 'admin') {
     throw new ApiError('Admin accounts cannot be self-registered', 403, 'FORBIDDEN');
@@ -137,6 +137,7 @@ export const register = catchAsync(async (req, res) => {
     email,
     password,
     role,
+    rollNumber: role === 'student' ? (rollNumber || '').trim() : '',
     branch: primaryBranch,
     className: primaryClass,
     section: role === 'admin' ? '' : primarySection,

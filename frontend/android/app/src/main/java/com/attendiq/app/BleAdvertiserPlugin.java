@@ -41,6 +41,7 @@ public class BleAdvertiserPlugin extends Plugin {
     private BluetoothLeAdvertiser advertiser;
     private AdvertiseCallback callback;
     private boolean isAdvertising = false;
+    private String originalAdapterName = null;
 
     private static final String SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb";
 
@@ -93,6 +94,11 @@ public class BleAdvertiserPlugin extends Plugin {
         }
 
         // Broadcast local bluetooth name as ATIQ_<studentRoll> for guaranteed scanner discovery
+        if (originalAdapterName == null) {
+            try {
+                originalAdapterName = adapter.getName();
+            } catch (Exception ignored) {}
+        }
         try {
             adapter.setName("ATIQ_" + studentRoll);
         } catch (Exception ignored) {}
@@ -193,14 +199,34 @@ public class BleAdvertiserPlugin extends Plugin {
 
     @PluginMethod
     public void stopAdvertising(PluginCall call) {
+        doStopAdvertising();
+        JSObject ret = new JSObject();
+        ret.put("advertising", false);
+        call.resolve(ret);
+    }
+
+    private void doStopAdvertising() {
         if (advertiser != null && callback != null && isAdvertising) {
             try {
                 advertiser.stopAdvertising(callback);
             } catch (Exception ignored) {}
             isAdvertising = false;
         }
-        JSObject ret = new JSObject();
-        ret.put("advertising", false);
-        call.resolve(ret);
+        // Restore original phone Bluetooth name (Issue 12)
+        if (originalAdapterName != null) {
+            try {
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter != null) {
+                    adapter.setName(originalAdapterName);
+                }
+            } catch (Exception ignored) {}
+            originalAdapterName = null;
+        }
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        super.handleOnDestroy();
+        doStopAdvertising();
     }
 }

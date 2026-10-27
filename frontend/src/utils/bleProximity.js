@@ -16,24 +16,19 @@ export const DESK_HOVER_DISTANCE_THRESHOLD = 2.0; // Realistic desk hover range 
  */
 export const isNativePlatform = () => Capacitor.isNativePlatform();
 
-/**
- * Calculates physical distance in meters using calibrated RSSI ranges for smartphones:
- * Distance < 0.5m is immediate adjacent proximity.
- * Distance <= 2.0m represents classroom desk proximity.
- */
-export const calculateDistanceMeters = (rssi, txPower = -65) => {
-  if (!rssi || rssi === 0) return 999.0;
-  // Realistic physical lookup for phone-to-phone BLE propagation indoors
-  if (rssi >= -65) return 0.3; // Adjacent / touching
-  if (rssi >= -72) return 0.6; // Same desk
-  if (rssi >= -78) return 1.1; // Walking past desk aisle
-  if (rssi >= -82) return 1.6; // In desk range
-  if (rssi >= -86) return 2.2; // Next desk over
+// Calibrated Log-Distance Path Loss constants for 2.4 GHz BLE between smartphones indoors
+const MEASURED_POWER_AT_1M = -68; // RSSI expected at exactly 1 meter
+const PATH_LOSS_EXPONENT = 2.4; // Classroom propagation path loss exponent
 
-  // Log-distance formula fallback for weaker signals
-  const ratio = (txPower - rssi) / (10 * 2.2);
+/**
+ * Calculates continuous physical distance in meters using standard Log-Distance Path Loss model:
+ * d = 10 ^ ((MeasuredPower - RSSI) / (10 * N))
+ */
+export const calculateDistanceMeters = (rssi, txPower = MEASURED_POWER_AT_1M) => {
+  if (!rssi || rssi === 0) return 999.0;
+  const ratio = (txPower - rssi) / (10 * PATH_LOSS_EXPONENT);
   const distance = Math.pow(10, ratio);
-  return Number(distance.toFixed(2));
+  return Number(Math.max(0.1, distance).toFixed(2));
 };
 
 /**
@@ -86,14 +81,13 @@ export const ensureBluetoothEnabled = async () => {
       } catch (e) {}
     }
 
-    // On Android, BLE discovery requires Location (GPS) to be active
+    // Non-intrusive location check: do not open settings dialog repeatedly
     try {
       const loc = await BleClient.isLocationEnabled();
       if (loc && loc.value === false) {
-        console.warn('Location is off - attempting to open location settings');
-        await BleClient.openLocationSettings();
+        console.info("BLE Location service is disabled on device.");
       }
-    } catch (locErr) {}
+    } catch (ignored) {}
 
     return isEnabled;
   } catch (err) {
@@ -224,10 +218,10 @@ export const extractRollFromServiceData = (result) => {
         }
       }
     }
-    // Check any key in serviceData if key isn't formatted with ffe0
+    // Strictly accept other service data keys only if they carry the explicit ATIQ_ signature
     for (const val of Object.values(result.serviceData)) {
       const decoded = decodePayload(val);
-      if (decoded && (decoded.includes('ATIQ_') || decoded.length >= 2)) {
+      if (decoded && decoded.includes('ATIQ_')) {
         const clean = decoded.replace('ATIQ_', '').trim();
         if (clean) return clean;
       }
@@ -415,7 +409,7 @@ export const listenForStudentSignal = async (targetId, timeoutMs = 3500) => {
     const unsubscribe = registerBleDetectionListener((dev) => {
       if (!resolved && dev.studentRoll) {
         const rollMatch = dev.studentRoll.toLowerCase().trim();
-        if (rollMatch.includes(normalized) || normalized.includes(rollMatch)) {
+        if (rollMatch === normalized) {
           if (dev.distance <= DESK_HOVER_DISTANCE_THRESHOLD) {
             resolved = true;
             clearTimeout(timer);

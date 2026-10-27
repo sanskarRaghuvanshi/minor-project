@@ -24,7 +24,7 @@ const StudentRegister = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password || !form.branch || !form.className || !form.section) {
+    if (!form.name || !form.email || !form.rollNumber || !form.password || !form.branch || !form.className || !form.section) {
       setError('All required fields must be filled');
       return;
     }
@@ -95,6 +95,10 @@ const StudentRegister = () => {
               <span style={{ fontWeight: 600, color: '#1E293B' }}>{submittedUser.email}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ color: '#64748B' }}>Roll Number</span>
+              <span style={{ fontWeight: 600, color: '#1E293B' }}>{submittedUser.rollNumber || 'N/A'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span style={{ color: '#64748B' }}>Program & Section</span>
               <span style={{ fontWeight: 600, color: '#1E293B' }}>
                 {submittedUser.branch} - {submittedUser.className} ({submittedUser.section})
@@ -158,8 +162,9 @@ const StudentRegister = () => {
                 setSubmittedUser(null);
                 setForm({
                   name: '',
-                  email: '',
-                  password: '',
+    email: '',
+    rollNumber: '',
+    password: '',
                   role: 'student',
                   branch: '',
                   className: '',
@@ -190,6 +195,13 @@ const StudentRegister = () => {
             <div className="input-icon">
               <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">person</span>
               <input id="name" name="name" value={form.name} onChange={handleChange} placeholder="Jane Smith" required />
+            </div>
+          </div>
+          <div className="form-group">
+            <label htmlFor="rollNumber">Roll Number / Student ID</label>
+            <div className="input-icon">
+              <span className="material-symbols-outlined input-icon__icon" aria-hidden="true">badge</span>
+              <input id="rollNumber" name="rollNumber" value={form.rollNumber} onChange={handleChange} placeholder="e.g. 21CS042" required />
             </div>
           </div>
           <div className="form-group">
