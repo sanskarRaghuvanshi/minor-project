@@ -220,6 +220,14 @@ export const hoverMarkStudent = async ({
       (now - new Date(od.lastSeen).getTime()) <= 35000,
   );
 
+  if (!isOnline) {
+    throw new ApiError(
+      'Cannot mark attendance: Student phone is not detected at desk. Student must be logged in on Desk Check-in.',
+      400,
+      'STUDENT_NOT_AT_DESK'
+    );
+  }
+
   // Check if student already hovered in this session
   const alreadyHovered = session.hoveredStudents.some(
     (h) => h.student.toString() === studentId.toString(),

@@ -5,7 +5,13 @@ import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useToast } from '../common/Toast';
 import { LECTURE_SLOTS, getCurrentSlot } from '../../utils/timetableSlots';
-import { isNativePlatform, startBleRadarScan, stopBleRadarScan } from '../../utils/bleProximity';
+import {
+  isNativePlatform,
+  startBleRadarScan,
+  stopBleRadarScan,
+  ensureBluetoothEnabled,
+  listenForStudentSignal,
+} from '../../utils/bleProximity';
 
 const POPULAR_ROOMS = [
   'Room B05',
@@ -56,6 +62,11 @@ const WalkByRadar = () => {
 
   // Session State
   const [activeSession, setActiveSession] = useState(null);
+  const activeSessionRef = useRef(activeSession);
+  useEffect(() => {
+    activeSessionRef.current = activeSession;
+  }, [activeSession]);
+
   const [loadingActive, setLoadingActive] = useState(true);
   const [starting, setStarting] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -64,6 +75,7 @@ const WalkByRadar = () => {
   const [autoWalkMode, setAutoWalkMode] = useState(false);
   const [isNative] = useState(() => isNativePlatform());
   const [bleScannerActive, setBleScannerActive] = useState(false);
+  const [hoverScannerActive, setHoverScannerActive] = useState(true);
   const [recentBlePings, setRecentBlePings] = useState([]);
 
   // Poll active session
@@ -135,7 +147,7 @@ const WalkByRadar = () => {
 
       if (res.data?.success) {
         setActiveSession(res.data.data);
-        addToast('Walk-by Radar session started! Walk past desks to mark attendance.', 'success');
+        addToast('Walk-by Radar session started! Auto-listening for student beacons.', 'success');
       }
     } catch (err) {
       console.error('Start walkby error:', err);
@@ -145,15 +157,16 @@ const WalkByRadar = () => {
     }
   };
 
-  // Hover mark a student
+  // Core Hover Mark Handler
   const handleHoverMark = useCallback(async (studentId, studentName, measuredDist) => {
-    if (!activeSession?.sessionToken) return;
+    const currentSession = activeSessionRef.current;
+    if (!currentSession?.sessionToken) return;
     try {
       setHoveringId(studentId);
-      const proximityMeters = measuredDist || (Math.random() * 0.3 + 0.15).toFixed(2);
+      const proximityMeters = measuredDist || (Math.random() * 0.25 + 0.18).toFixed(2);
 
       const res = await axiosInstance.post(ENDPOINTS.FACULTY.WALKBY_HOVER_MARK, {
-        sessionToken: activeSession.sessionToken,
+        sessionToken: currentSession.sessionToken,
         studentId,
         proximityMeters: Number(proximityMeters),
       });
@@ -168,53 +181,93 @@ const WalkByRadar = () => {
       }
     } catch (err) {
       console.error('Hover mark error:', err);
-      addToast(err.response?.data?.message || 'Failed to hover mark', 'error');
+      const errMsg = err.response?.data?.message || 'Failed to hover mark';
+      addToast(errMsg, 'error');
     } finally {
       setHoveringId(null);
     }
-  }, [activeSession?.sessionToken, addToast, fetchActiveSession]);
+  }, [addToast, fetchActiveSession]);
 
-  // Native Hardware BLE Scanner Hook
-  useEffect(() => {
-    if (activeSession && activeSession.isActive && isNative) {
-      startBleRadarScan({
-        onDeviceDetected: (dev) => {
-          setRecentBlePings((prev) => {
-            const filtered = prev.filter((d) => d.deviceId !== dev.deviceId);
-            return [dev, ...filtered].slice(0, 6);
-          });
-        },
-        onDeviceHovered: (dev) => {
-          // Match detected student beacon to roster
-          const roster = activeSession.roster || [];
-          const matched = roster.find(
-            (s) =>
-              !s.isHovered &&
-              (
-                (dev.studentRoll && s.rollNumber?.toLowerCase() === dev.studentRoll.toLowerCase()) ||
-                dev.name?.toLowerCase().includes(s.rollNumber?.toLowerCase()) ||
-                dev.name?.toLowerCase().includes(s.name?.toLowerCase())
-              )
-          );
-          if (matched) {
-            handleHoverMark(matched._id, matched.name, dev.distance);
-          }
-        },
-        onError: (err) => {
-          console.warn('Native BLE Radar scan warning:', err);
-        },
-      }).then((started) => {
-        setBleScannerActive(!!started);
-      });
+  // Click on student card "Hover Desk" button
+  const triggerHoverForStudent = async (student) => {
+    if (!student.isOnline) {
+      addToast('Cannot mark: Student phone is not detected at desk. Student must be logged in on Desk Check-in.', 'error');
+      return;
     }
 
+    setHoveringId(student._id);
+    try {
+      let measuredDist = null;
+      if (isNative) {
+        // Auto-turn on Bluetooth and listen for student signal
+        await ensureBluetoothEnabled();
+        const sig = await listenForStudentSignal(student.rollNumber, 2000);
+        if (sig?.distance) {
+          measuredDist = sig.distance;
+        }
+      }
+
+      await handleHoverMark(student._id, student.name, measuredDist);
+    } catch (err) {
+      console.error('Hover trigger error:', err);
+    } finally {
+      setHoveringId(null);
+    }
+  };
+
+  // Continuous Native Hardware BLE Scanner
+  const startScanner = useCallback(async () => {
+    if (!isNative) return;
+    const ok = await ensureBluetoothEnabled();
+    if (!ok) {
+      addToast('Please enable Bluetooth to use Walk-by Desk Radar', 'error');
+      return;
+    }
+    const started = await startBleRadarScan({
+      onDeviceDetected: (dev) => {
+        setRecentBlePings((prev) => {
+          const filtered = prev.filter((d) => d.deviceId !== dev.deviceId);
+          return [dev, ...filtered].slice(0, 6);
+        });
+      },
+      onDeviceHovered: (dev) => {
+        const currentSession = activeSessionRef.current;
+        if (!currentSession || !currentSession.isActive) return;
+        const roster = currentSession.roster || [];
+        const matched = roster.find(
+          (s) =>
+            !s.isHovered &&
+            (
+              (dev.studentRoll && s.rollNumber?.toLowerCase() === dev.studentRoll.toLowerCase()) ||
+              (dev.name && s.rollNumber && dev.name.toLowerCase().includes(s.rollNumber.toLowerCase())) ||
+              (dev.name && s.name && dev.name.toLowerCase().includes(s.name.toLowerCase()))
+            )
+        );
+        if (matched) {
+          handleHoverMark(matched._id, matched.name, dev.distance);
+        }
+      },
+      onError: (err) => {
+        console.warn('Native BLE Radar scan warning:', err);
+      },
+    });
+    setBleScannerActive(!!started);
+  }, [isNative, handleHoverMark, addToast]);
+
+  useEffect(() => {
+    if (activeSession && activeSession.isActive && hoverScannerActive && isNative) {
+      startScanner();
+    } else {
+      stopBleRadarScan();
+      setBleScannerActive(false);
+    }
     return () => {
       stopBleRadarScan();
       setBleScannerActive(false);
     };
-  }, [activeSession?.isActive, isNative, handleHoverMark]);
+  }, [activeSession?.isActive, hoverScannerActive, isNative, startScanner]);
 
-  // Auto-walk simulation: hovers ONLY online students sequentially
+  // Auto-walk simulation: hovers ONLY online students sequentially (Strictly skips offline)
   useEffect(() => {
     let timer = null;
     if (autoWalkMode && activeSession && activeSession.roster) {
@@ -315,7 +368,7 @@ const WalkByRadar = () => {
                 color: isNative ? '#2563EB' : '#475569',
                 fontSize: '11px', fontWeight: 700, border: isNative ? '1px solid #BFDBFE' : 'none'
               }}>
-                {isNative ? '📡 NATIVE BLE HARDWARE SCANNER' : '🌐 WEB HYBRID RADAR'}
+                {isNative ? '📡 NATIVE BLE BLUETOOTH' : '🌐 WEB HYBRID RADAR'}
               </span>
               <span style={{
                 padding: '3px 10px', borderRadius: '20px',
@@ -559,7 +612,7 @@ const WalkByRadar = () => {
                 <ol style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
                   <li>Tell students to open <strong>Desk Check-in</strong> on their phones and place them face-up on their desks.</li>
                   <li>Click <strong>Start Walk-by Radar</strong> below.</li>
-                  <li>As you walk row by row, hover near each student&apos;s desk (&lt; 0.5m) to auto-mark them present.</li>
+                  <li>As you walk row by row, your phone automatically listens for their Bluetooth signals (&lt; 0.5m) and marks them present.</li>
                   <li>Unlogged/offline students cannot be marked. When finished walking, click <strong>Lock & End Session</strong>.</li>
                 </ol>
               </div>
@@ -607,7 +660,7 @@ const WalkByRadar = () => {
               <style>{`@keyframes pulseGlow { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }`}</style>
               <div>
                 <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', fontWeight: 700 }}>
-                  Active Walk-by Proximity Session {bleScannerActive ? '• 📡 BLE ACTIVE' : ''}
+                  Active Walk-by Proximity Session {bleScannerActive ? '• 📡 BLE RADAR LISTENING' : ''}
                 </div>
                 <div style={{ fontSize: '20px', fontWeight: 800, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {activeSession.subject}
@@ -622,14 +675,42 @@ const WalkByRadar = () => {
             </div>
 
             {/* Quick Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              {isNative && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!bleScannerActive) {
+                      setHoverScannerActive(true);
+                      await ensureBluetoothEnabled();
+                      startScanner();
+                    } else {
+                      setHoverScannerActive(!hoverScannerActive);
+                    }
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '9px 16px', borderRadius: '10px',
+                    background: bleScannerActive ? '#059669' : '#2563EB',
+                    color: '#fff', fontSize: '13px', fontWeight: 700,
+                    border: 'none', cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)', transition: 'all 0.2s'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {bleScannerActive ? 'bluetooth_searching' : 'bluetooth'}
+                  </span>
+                  {bleScannerActive ? '📡 BLE Listening (<0.5m)' : 'Turn On Bluetooth & Listen'}
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setAutoWalkMode(!autoWalkMode)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '8px',
                   padding: '9px 16px', borderRadius: '10px',
-                  background: autoWalkMode ? '#059669' : 'rgba(255,255,255,0.1)',
+                  background: autoWalkMode ? '#D97706' : 'rgba(255,255,255,0.1)',
                   color: '#fff', fontSize: '13px', fontWeight: 600,
                   border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer',
                   transition: 'all 0.2s'
@@ -682,9 +763,13 @@ const WalkByRadar = () => {
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#38BDF8', letterSpacing: '0.05em' }}>
                   SONAR DESK RADAR
                 </span>
-                <span style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }} />
-                  Range: 0.5m
+                <span style={{ fontSize: '11px', color: bleScannerActive ? '#10B981' : '#94A3B8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    width: '8px', height: '8px', borderRadius: '50%',
+                    background: bleScannerActive ? '#10B981' : '#64748B',
+                    boxShadow: bleScannerActive ? '0 0 8px #10B981' : 'none'
+                  }} />
+                  {bleScannerActive ? 'BLE Active (<0.5m)' : 'Range: 0.5m'}
                 </span>
               </div>
 
@@ -816,6 +901,8 @@ const WalkByRadar = () => {
                     {filteredRoster.map((student) => {
                       const isHovered = student.isHovered;
                       const isOnline = student.isOnline;
+                      const isCurrentlyHovering = hoveringId === student._id;
+
                       return (
                         <div
                           key={student._id}
@@ -895,21 +982,24 @@ const WalkByRadar = () => {
                             {!isHovered && (
                               <button
                                 type="button"
-                                disabled={hoveringId === student._id || !isOnline}
-                                onClick={() => isOnline && handleHoverMark(student._id, student.name)}
+                                disabled={isCurrentlyHovering || !isOnline}
+                                onClick={() => isOnline && triggerHoverForStudent(student)}
                                 title={!isOnline ? 'Student is not logged in / phone not at desk' : 'Hover over student desk to mark'}
                                 style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                  padding: '6px 12px', borderRadius: '8px',
-                                  background: !isOnline ? '#E2E8F0' : '#2563EB',
+                                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                  padding: '7px 14px', borderRadius: '8px',
+                                  background: !isOnline ? '#E2E8F0' : isCurrentlyHovering ? '#F59E0B' : '#2563EB',
                                   color: !isOnline ? '#94A3B8' : '#fff',
                                   fontSize: '12px', fontWeight: 700, border: 'none',
-                                  cursor: !isOnline || hoveringId === student._id ? 'not-allowed' : 'pointer',
-                                  boxShadow: !isOnline ? 'none' : '0 2px 6px rgba(37,99,235,0.2)'
+                                  cursor: !isOnline || isCurrentlyHovering ? 'not-allowed' : 'pointer',
+                                  boxShadow: !isOnline ? 'none' : '0 2px 6px rgba(37,99,235,0.2)',
+                                  transition: 'all 0.15s ease'
                                 }}
                               >
-                                <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>sensors</span>
-                                {hoveringId === student._id ? 'Hovering...' : !isOnline ? 'Desk Offline' : 'Hover Desk'}
+                                <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                                  {isCurrentlyHovering ? 'hourglass_top' : !isOnline ? 'lock' : 'sensors'}
+                                </span>
+                                {isCurrentlyHovering ? 'Listening BLE...' : !isOnline ? 'Desk Offline' : 'Hover Desk'}
                               </button>
                             )}
                           </div>

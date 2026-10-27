@@ -27,9 +27,16 @@ public class BleAdvertiserPlugin extends Plugin {
         String studentRoll = call.getString("rollNumber", "UNKNOWN");
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (adapter == null || !adapter.isEnabled()) {
-            call.reject("Bluetooth is turned off. Please turn on Bluetooth.");
+        if (adapter == null) {
+            call.reject("Device hardware does not support BLE.");
             return;
+        }
+
+        // Auto-enable bluetooth if turned off
+        if (!adapter.isEnabled()) {
+            try {
+                adapter.enable();
+            } catch (Exception ignored) {}
         }
 
         advertiser = adapter.getBluetoothLeAdvertiser();
@@ -54,10 +61,16 @@ public class BleAdvertiserPlugin extends Plugin {
 
         ParcelUuid pUuid = new ParcelUuid(UUID.fromString(SERVICE_UUID));
 
+        // Primary 31-byte advertisement packet
         AdvertiseData data = new AdvertiseData.Builder()
                 .setIncludeDeviceName(false)
-                .setIncludeTxPowerLevel(true)
+                .setIncludeTxPowerLevel(false)
                 .addServiceUuid(pUuid)
+                .build();
+
+        // Scan response packet carrying student roll number safely within limits
+        AdvertiseData scanResponse = new AdvertiseData.Builder()
+                .setIncludeDeviceName(false)
                 .addServiceData(pUuid, studentRoll.getBytes(StandardCharsets.UTF_8))
                 .build();
 
@@ -81,7 +94,7 @@ public class BleAdvertiserPlugin extends Plugin {
         };
 
         try {
-            advertiser.startAdvertising(settings, data, callback);
+            advertiser.startAdvertising(settings, data, scanResponse, callback);
         } catch (SecurityException se) {
             call.reject("Missing BLUETOOTH_ADVERTISE permission: " + se.getMessage());
         } catch (Exception ex) {

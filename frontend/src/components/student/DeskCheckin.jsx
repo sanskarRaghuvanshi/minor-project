@@ -3,7 +3,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../common/Toast';
-import { isNativePlatform, startStudentBleBeacon, stopStudentBleBeacon } from '../../utils/bleProximity';
+import { isNativePlatform, startStudentBleBeacon, stopStudentBleBeacon, ensureBluetoothEnabled } from '../../utils/bleProximity';
 
 const DeskCheckin = () => {
   const { user } = useAuth();
@@ -62,18 +62,28 @@ const DeskCheckin = () => {
   }, [checkWalkByStatus]);
 
   // Turn on Bluetooth BLE Peripheral Advertising on desk
+  const activateDeskBeacon = useCallback(async () => {
+    if (!isNative || !user?.rollNumber) return false;
+    await ensureBluetoothEnabled();
+    const started = await startStudentBleBeacon(user.rollNumber);
+    setBleBroadcasting(!!started);
+    return started;
+  }, [isNative, user?.rollNumber]);
+
   useEffect(() => {
+    let mounted = true;
     if (isNative && user?.rollNumber) {
-      startStudentBleBeacon(user.rollNumber).then((started) => {
-        setBleBroadcasting(!!started);
+      activateDeskBeacon().then((started) => {
+        if (mounted) setBleBroadcasting(!!started);
       });
     }
 
     return () => {
+      mounted = false;
       stopStudentBleBeacon();
       setBleBroadcasting(false);
     };
-  }, [isNative, user?.rollNumber]);
+  }, [isNative, user?.rollNumber, activateDeskBeacon]);
 
   const hasActive = statusData?.hasActiveSession;
   const isHovered = statusData?.isHovered;
@@ -104,7 +114,7 @@ const DeskCheckin = () => {
           Place your phone face-up on your desk. Attendance is verified automatically when the teacher hovers past.
         </p>
 
-        {bleBroadcasting && (
+        {bleBroadcasting ? (
           <div style={{
             marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px',
             padding: '4px 12px', borderRadius: '12px', background: '#F0FDF4',
@@ -113,7 +123,23 @@ const DeskCheckin = () => {
             <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bluetooth_searching</span>
             BLE Desk Beacon Active • Roll: {user?.rollNumber}
           </div>
-        )}
+        ) : isNative && user?.rollNumber ? (
+          <div style={{ marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={activateDeskBeacon}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '5px 14px', borderRadius: '12px', background: '#EFF6FF',
+                border: '1px solid #BFDBFE', color: '#2563EB', fontSize: '12px', fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bluetooth</span>
+              Turn On Bluetooth Desk Beacon
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {loading ? (
