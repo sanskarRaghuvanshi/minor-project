@@ -174,6 +174,14 @@ export const isAttendIqBeacon = (result) => {
   const name = result.device?.name || result.localName || '';
   if (name.includes('ATIQ_') || name.includes('STUDENT') || name.includes('nova')) return true;
 
+  // Check manufacturerData (0xFFFF = 65535)
+  if (result.manufacturerData) {
+    for (const val of Object.values(result.manufacturerData)) {
+      const decoded = decodePayload(val);
+      if (decoded && (decoded.includes('ATIQ_') || decoded.includes('nova'))) return true;
+    }
+  }
+
   if (result.serviceData) {
     for (const key of Object.keys(result.serviceData)) {
       if (key.toLowerCase().includes('ffe0')) return true;
@@ -207,7 +215,18 @@ export const extractRollFromServiceData = (result) => {
     if (extracted) return extracted;
   }
 
-  // 2. Second priority: serviceData payload with hex / string decoding
+  // 2. Second priority: manufacturerData payload
+  if (result.manufacturerData) {
+    for (const val of Object.values(result.manufacturerData)) {
+      const decoded = decodePayload(val);
+      if (decoded && decoded.includes('ATIQ_')) {
+        const extracted = decoded.split('ATIQ_')[1]?.trim();
+        if (extracted) return extracted;
+      }
+    }
+  }
+
+  // 3. Third priority: serviceData payload with hex / string decoding
   if (result.serviceData) {
     for (const [key, val] of Object.entries(result.serviceData)) {
       if (key.toLowerCase().includes('ffe0')) {
@@ -296,7 +315,6 @@ export const startBleRadarScan = async ({ onDeviceDetected, onDeviceHovered, onE
       {
         scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
         allowDuplicates: true,
-        allowExtendedAdvertising: true,
       },
       (result) => {
         const studentRoll = extractRollFromServiceData(result);

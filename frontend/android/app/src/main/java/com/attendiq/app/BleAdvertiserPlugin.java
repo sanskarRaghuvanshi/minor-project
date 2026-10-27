@@ -44,6 +44,7 @@ public class BleAdvertiserPlugin extends Plugin {
     private String originalAdapterName = null;
 
     private static final String SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb";
+    private static final int MANUFACTURER_ID = 0xFFFF; // Standard experimental BLE Manufacturer ID
 
     @PluginMethod
     public void startAdvertising(PluginCall call) {
@@ -79,6 +80,10 @@ public class BleAdvertiserPlugin extends Plugin {
 
     private void doStartAdvertising(PluginCall call) {
         String studentRoll = call.getString("rollNumber", "STUDENT");
+        if (studentRoll == null || studentRoll.trim().isEmpty()) {
+            studentRoll = "STUDENT";
+        }
+        studentRoll = studentRoll.trim();
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         if (adapter == null) {
@@ -93,12 +98,13 @@ public class BleAdvertiserPlugin extends Plugin {
             } catch (Exception ignored) {}
         }
 
-        // Broadcast local bluetooth name as ATIQ_<studentRoll> for guaranteed scanner discovery
+        // Save original name to restore on stop (Issue 12)
         if (originalAdapterName == null) {
             try {
                 originalAdapterName = adapter.getName();
             } catch (Exception ignored) {}
         }
+
         try {
             adapter.setName("ATIQ_" + studentRoll);
         } catch (Exception ignored) {}
@@ -123,24 +129,21 @@ public class BleAdvertiserPlugin extends Plugin {
                 .setTimeout(0)
                 .build();
 
-        ParcelUuid pUuid = new ParcelUuid(UUID.fromString(SERVICE_UUID));
+        // Build 16-byte ultra-compact Primary Advertisement Packet (Guaranteed <= 31 bytes)
+        // Uses Manufacturer Specific Data (0xFFFF): [Length 1B][Type 0xFF 1B][ID 2B][Data "ATIQ_<roll>"]
+        // Total size: 3 (flags) + 4 (hdr) + 9 ("ATIQ_nova") = 16 bytes! Fits in 100% of Android devices.
+        byte[] payloadBytes = ("ATIQ_" + studentRoll).getBytes(StandardCharsets.UTF_8);
+        if (payloadBytes.length > 20) {
+            byte[] truncated = new byte[20];
+            System.arraycopy(payloadBytes, 0, truncated, 0, 20);
+            payloadBytes = truncated;
+        }
 
-        // Primary 31-byte advertisement packet: Service UUID + Service Data
-        // Keep includeDeviceName=false so packet NEVER exceeds the strict 31-byte BLE limit!
-        AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder()
+        AdvertiseData data = new AdvertiseData.Builder()
                 .setIncludeDeviceName(false)
                 .setIncludeTxPowerLevel(false)
-                .addServiceUuid(pUuid);
-
-        // Put student roll in serviceData (truncated to max 12 bytes to guarantee fitting under 31 bytes)
-        byte[] rollBytes = studentRoll.getBytes(StandardCharsets.UTF_8);
-        if (rollBytes.length > 12) {
-            byte[] truncated = new byte[12];
-            System.arraycopy(rollBytes, 0, truncated, 0, 12);
-            rollBytes = truncated;
-        }
-        dataBuilder.addServiceData(pUuid, rollBytes);
-        AdvertiseData data = dataBuilder.build();
+                .addManufacturerData(MANUFACTURER_ID, payloadBytes)
+                .build();
 
         // Scan response packet carries device name ATIQ_<studentRoll> within its own independent 31-byte budget
         AdvertiseData scanResponse = new AdvertiseData.Builder()
@@ -148,6 +151,7 @@ public class BleAdvertiserPlugin extends Plugin {
                 .setIncludeTxPowerLevel(false)
                 .build();
 
+        final String finalRoll = studentRoll;
         callback = new AdvertiseCallback() {
             @Override
             public void onStartSuccess(AdvertiseSettings settingsInEffect) {
@@ -155,7 +159,7 @@ public class BleAdvertiserPlugin extends Plugin {
                 isAdvertising = true;
                 JSObject ret = new JSObject();
                 ret.put("advertising", true);
-                ret.put("rollNumber", studentRoll);
+                ret.put("rollNumber", finalRoll);
                 call.resolve(ret);
             }
 
