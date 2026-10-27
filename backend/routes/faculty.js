@@ -1,5 +1,6 @@
 import express from 'express';
 import * as facultyController from '../controllers/facultyController.js';
+import * as walkByController from '../controllers/walkByController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { bulkLimiter } from '../middleware/rateLimiter.js';
 
@@ -15,5 +16,11 @@ router.get('/defaulters', facultyController.getDefaulters);
 router.post('/notify-defaulters', bulkLimiter, facultyController.notifyDefaultersValidations, facultyController.notifyDefaulters);
 router.post('/feedback', facultyController.submitFeedbackValidations, facultyController.submitFeedback);
 router.get('/feedback-history', facultyController.getFeedbackHistory);
+
+// Walk-by Proximity Desk Hover Endpoints
+router.post('/walkby/start', walkByController.startWalkByValidations, walkByController.startWalkBy);
+router.get('/walkby/active', walkByController.getActiveWalkBy);
+router.post('/walkby/hover-mark', walkByController.hoverMark);
+router.post('/walkby/end', walkByController.endWalkBy);
 
 export default router;

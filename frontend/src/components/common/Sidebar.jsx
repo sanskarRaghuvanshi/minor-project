@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 const facultyLinks = [
   { to: '/faculty/dashboard', label: 'Dashboard', icon: 'grid_view' },
   { to: '/faculty/mark-attendance', label: 'Mark Attendance', icon: 'check_box' },
+  { to: '/faculty/qr-generator', label: 'QR Attendance', icon: 'qr_code_2' },
+  { to: '/faculty/walkby-radar', label: 'Walk-by Radar', icon: 'radar' },
   { to: '/faculty/defaulters', label: 'Defaulters', icon: 'warning' },
   { to: '/faculty/settings', label: 'Settings', icon: 'settings' },
 ];
@@ -12,6 +14,8 @@ const facultyLinks = [
 const coordinatorLinks = [
   { to: '/coordinator/dashboard', label: 'Dashboard', icon: 'grid_view' },
   { to: '/coordinator/mark-attendance', label: 'Mark Attendance', icon: 'check_box' },
+  { to: '/coordinator/qr-generator', label: 'QR Attendance', icon: 'qr_code_2' },
+  { to: '/coordinator/walkby-radar', label: 'Walk-by Radar', icon: 'radar' },
   { to: '/coordinator/defaulters', label: 'Defaulters', icon: 'warning' },
   { to: '/coordinator/teachers', label: 'Teachers', icon: 'supervisor_account' },
   { to: '/coordinator/students', label: 'Students', icon: 'school' },
@@ -28,10 +32,11 @@ const adminLinks = [
 
 const studentLinks = [
   { to: '/student/dashboard', label: 'Dashboard', icon: 'grid_view' },
+  { to: '/student/desk-checkin', label: 'Desk Check-in', icon: 'sensors' },
+  { to: '/student/scan', label: 'Scan Attendance', icon: 'qr_code_scanner' },
   { to: '/student/my-attendance', label: 'My Attendance', icon: 'calendar_month' },
   { to: '/student/stats', label: 'Stats', icon: 'analytics' },
   { to: '/student/eligibility', label: 'Eligibility', icon: 'verified' },
-  { to: '/student/scan', label: 'Scan Attendance', icon: 'qr_code_scanner' },
   { to: '/student/apply-leave', label: 'Apply Leave', icon: 'flight_takeoff' },
   { to: '/student/my-leaves', label: 'My Leaves', icon: 'description' },
 ];

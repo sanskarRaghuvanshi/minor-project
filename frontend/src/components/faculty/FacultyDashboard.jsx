@@ -364,6 +364,32 @@ const FacultyDashboard = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            {/* Walk-by Desk Radar */}
+            <button
+              type="button"
+              onClick={() => navigate('/faculty/walkby-radar')}
+              style={{
+                background: 'linear-gradient(135deg, #0EA5E9, #0284C7)', borderRadius: '24px',
+                padding: '20px', color: '#fff', border: 'none', cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(14,165,233,0.3)', textAlign: 'left',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#fff' }}>radar</span>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 700 }}>Walk-by Radar</span>
+                    <span style={{ padding: '1px 6px', borderRadius: '4px', background: '#10B981', fontSize: '9px', fontWeight: 700 }}>&lt;0.5m</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'rgba(224,242,254,0.9)', marginTop: '2px' }}>Desk hover auto-mark</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', opacity: 0.7 }}>chevron_right</span>
+            </button>
+
             {/* QR Attendance */}
             <button
               type="button"

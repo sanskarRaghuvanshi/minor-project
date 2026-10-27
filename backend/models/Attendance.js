@@ -50,7 +50,7 @@ const attendanceSchema = new Schema(
     },
     source: {
       type: String,
-      enum: ['manual', 'qr'],
+      enum: ['manual', 'qr', 'walkby'],
       default: 'manual',
     },
     qrSession: {

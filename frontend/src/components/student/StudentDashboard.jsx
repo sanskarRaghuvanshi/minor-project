@@ -344,6 +344,27 @@ const StudentDashboard = () => {
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Desk Check-in (Walk-by Proximity) */}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/student/desk-checkin')}
+                    style={{
+                      width: '100%', padding: '12px 16px', borderRadius: '14px',
+                      background: 'linear-gradient(135deg, #0284C7, #0369A1)', color: '#fff',
+                      border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      boxShadow: '0 2px 8px rgba(2,132,199,0.25)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>sensors</span>
+                      <span>Desk Check-in (Walk-by Radar)</span>
+                    </div>
+                    <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.2)', fontSize: '10px', fontWeight: 700 }}>
+                      &lt;0.5m
+                    </span>
+                  </button>
+
                   {/* Primary: Live Camera Scan */}
                   <button
                     type="button"

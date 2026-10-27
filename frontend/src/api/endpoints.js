@@ -49,6 +49,10 @@ export const ENDPOINTS = {
     QR_ACTIVE: `${BASE}/qr/active`,
     QR_SESSION: (token) => `${BASE}/qr/${token}`,
     QR_END: (token) => `${BASE}/qr/${token}/end`,
+    WALKBY_START: `${BASE}/faculty/walkby/start`,
+    WALKBY_ACTIVE: `${BASE}/faculty/walkby/active`,
+    WALKBY_HOVER_MARK: `${BASE}/faculty/walkby/hover-mark`,
+    WALKBY_END: `${BASE}/faculty/walkby/end`,
   },
   COORDINATOR: {
     STUDENTS: `${BASE}/coordinator/students`,
@@ -60,6 +64,7 @@ export const ENDPOINTS = {
     STATS: `${BASE}/student/stats`,
     ELIGIBILITY: `${BASE}/student/eligibility`,
     SCAN_ATTENDANCE: `${BASE}/qr/scan`,
+    WALKBY_STATUS: `${BASE}/student/walkby/status`,
   },
   HEALTH: `${BASE}/health`,
 };

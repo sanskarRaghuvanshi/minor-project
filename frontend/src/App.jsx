@@ -38,8 +38,10 @@ const UserManagement = lazy(() => import('./components/admin/UserManagement'));
 const AdminDefaulters = lazy(() => import('./components/admin/AdminDefaulters'));
 const QrGenerator = lazy(() => import('./components/faculty/QrGenerator'));
 const QrSessionView = lazy(() => import('./components/faculty/QrSessionView'));
+const WalkByRadar = lazy(() => import('./components/faculty/WalkByRadar'));
 const FacultySettings = lazy(() => import('./components/faculty/FacultySettings'));
 const ScanAttendancePage = lazy(() => import('./pages/ScanAttendancePage'));
+const DeskCheckin = lazy(() => import('./components/student/DeskCheckin'));
 
 const Loading = () => <div className="page-loading"><Skeleton variant="card" height="400px" /></div>;
 
@@ -75,6 +77,7 @@ const App = () => (
                   <Route path="leave-requests" element={<LeaveRequests />} />
                   <Route path="qr-generator" element={<QrGenerator />} />
                   <Route path="qr-session/:token" element={<QrSessionView />} />
+                  <Route path="walkby-radar" element={<WalkByRadar />} />
                   <Route path="settings" element={<FacultySettings />} />
                 </Route>
 
@@ -94,6 +97,7 @@ const App = () => (
                   <Route path="apply-leave" element={<ApplyLeave />} />
                   <Route path="my-leaves" element={<MyLeaves />} />
                   <Route path="scan" element={<ScanAttendancePage />} />
+                  <Route path="desk-checkin" element={<DeskCheckin />} />
                 </Route>
 
                 <Route
@@ -115,6 +119,7 @@ const App = () => (
                   <Route path="feedback" element={<CoordinatorFeedback />} />
                   <Route path="qr-generator" element={<QrGenerator />} />
                   <Route path="qr-session/:token" element={<QrSessionView />} />
+                  <Route path="walkby-radar" element={<WalkByRadar />} />
                 </Route>
 
                 <Route
