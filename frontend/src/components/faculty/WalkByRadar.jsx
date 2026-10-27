@@ -119,13 +119,14 @@ const WalkByRadar = () => {
 
   // Handle start session
   const handleStartSession = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const finalRoom = isCustomRoom ? customRoom.trim() : room;
     if (!finalRoom) {
       addToast('Please select or specify a classroom', 'error');
       return;
     }
-    if (!subject) {
+    const finalSubject = subject || subjects[0] || user?.subjects?.[0];
+    if (!finalSubject) {
       addToast('Please select a subject', 'error');
       return;
     }
@@ -135,7 +136,7 @@ const WalkByRadar = () => {
     try {
       setStarting(true);
       const res = await axiosInstance.post(ENDPOINTS.FACULTY.WALKBY_START, {
-        subject,
+        subject: finalSubject,
         date,
         slotNumber: slotObj.slotNumber,
         timeSlot: slotObj.timeRange,
@@ -151,6 +152,37 @@ const WalkByRadar = () => {
       }
     } catch (err) {
       console.error('Start walkby error:', err);
+      addToast(err.response?.data?.message || 'Failed to start session', 'error');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  // Quick 1-Click Auto-Start
+  const handleQuickAutoStart = async () => {
+    const finalRoom = isCustomRoom ? (customRoom.trim() || 'Room B05') : (room || 'Room B05');
+    const finalSubject = subject || subjects[0] || user?.subjects?.[0] || 'General';
+    const slotObj = LECTURE_SLOTS.find((s) => s.id === selectedSlot) || getCurrentSlot() || LECTURE_SLOTS[0];
+
+    try {
+      setStarting(true);
+      const res = await axiosInstance.post(ENDPOINTS.FACULTY.WALKBY_START, {
+        subject: finalSubject,
+        date: date || new Date().toISOString().split('T')[0],
+        slotNumber: slotObj.slotNumber,
+        timeSlot: slotObj.timeRange,
+        room: finalRoom,
+        branch: activeClass.branch || user?.branch,
+        className: activeClass.className || user?.className,
+        section: activeClass.section !== undefined ? activeClass.section : user?.section,
+      });
+
+      if (res.data?.success) {
+        setActiveSession(res.data.data);
+        addToast('Walk-by Radar session auto-started! Ready to detect desks.', 'success');
+      }
+    } catch (err) {
+      console.error('Quick start walkby error:', err);
       addToast(err.response?.data?.message || 'Failed to start session', 'error');
     } finally {
       setStarting(false);
@@ -362,7 +394,12 @@ const WalkByRadar = () => {
   const attendanceRate = totalStudents > 0 ? Math.round((hoveredCount / totalStudents) * 100) : 0;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div style={{
+      maxWidth: '1200px', margin: '0 auto',
+      padding: '24px 16px',
+      paddingTop: '68px', // Ensure ample clearance for fixed mobile hamburger menu
+      fontFamily: "'Plus Jakarta Sans', sans-serif"
+    }}>
       {/* Header Banner */}
       <div style={{
         display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
@@ -441,11 +478,50 @@ const WalkByRadar = () => {
           <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
         </div>
       ) : !activeSession ? (
-        /* Setup / Start Form */
-        <div style={{
-          background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
-          boxShadow: '0 4px 20px -2px rgba(15,23,42,0.05)', overflow: 'hidden'
-        }}>
+        <div>
+          {/* Quick 1-Click Auto-Start Hero Banner */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1E40AF 0%, #2563EB 100%)',
+            borderRadius: '16px', padding: '20px 24px', color: '#fff',
+            marginBottom: '24px', display: 'flex', flexWrap: 'wrap',
+            alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+            boxShadow: '0 8px 24px -4px rgba(37,99,235,0.35)'
+          }}>
+            <div>
+              <div style={{ fontSize: '18px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>bolt</span>
+                Auto-Start Walk-by Radar Session
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: '13px', opacity: 0.9 }}>
+                1-Click instant start for {activeClass.className || user?.className || 'Class'} ({subject || subjects[0] || 'Default Subject'}) in {room}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleQuickAutoStart}
+              disabled={starting}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '10px',
+                padding: '13px 26px', borderRadius: '12px',
+                background: '#FFFFFF', color: '#1D4ED8',
+                fontSize: '15px', fontWeight: 800, border: 'none',
+                cursor: starting ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+                transition: 'all 0.2s', whiteSpace: 'nowrap'
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>
+                {starting ? 'hourglass_top' : 'play_arrow'}
+              </span>
+              {starting ? 'Auto-Starting Session...' : '⚡ Auto-Start Radar Now'}
+            </button>
+          </div>
+
+          {/* Setup / Start Form */}
+          <div style={{
+            background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0',
+            boxShadow: '0 4px 20px -2px rgba(15,23,42,0.05)', overflow: 'hidden'
+          }}>
           <div style={{
             padding: '20px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between'
@@ -667,6 +743,7 @@ const WalkByRadar = () => {
             </div>
           </form>
         </div>
+      </div>
       ) : (
         /* Active Walk-By Radar Screen */
         <div>
@@ -748,6 +825,91 @@ const WalkByRadar = () => {
                     {autoWalkMode ? 'pause_circle' : 'directions_walk'}
                   </span>
                   {autoWalkMode ? 'Simulating Walk-by...' : 'Simulate Walk-by (Web Only)'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Auto Walk-by Mode Action Card */}
+          <div style={{
+            background: bleScannerActive ? '#F0FDF4' : '#EFF6FF',
+            border: bleScannerActive ? '2px solid #22C55E' : '2px solid #3B82F6',
+            borderRadius: '16px', padding: '16px 20px', marginBottom: '24px',
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+            justifyContent: 'space-between', gap: '14px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '46px', height: '46px', borderRadius: '12px',
+                background: bleScannerActive ? '#16A34A' : '#2563EB',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                boxShadow: bleScannerActive ? '0 4px 12px rgba(22,163,74,0.3)' : '0 4px 12px rgba(37,99,235,0.3)'
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '26px' }}>
+                  {bleScannerActive ? 'radar' : 'bluetooth_searching'}
+                </span>
+              </div>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  Auto Walk-by Radar: {bleScannerActive ? 'ACTIVE (< 0.5m)' : 'STANDBY'}
+                  <span style={{
+                    padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                    background: bleScannerActive ? '#DCFCE7' : '#DBEAFE',
+                    color: bleScannerActive ? '#15803D' : '#1E40AF'
+                  }}>
+                    {bleScannerActive ? 'WALK PAST DESKS TO AUTO-MARK' : 'TAP TO RESUME'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                  Walk past desks holding your phone. Any student within 0.5m is automatically detected and marked present! No tapping required.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {isNative ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!bleScannerActive) {
+                      setHoverScannerActive(true);
+                      await ensureBluetoothEnabled();
+                      startScanner();
+                    } else {
+                      setHoverScannerActive(!hoverScannerActive);
+                    }
+                  }}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '10px 20px', borderRadius: '10px',
+                    background: bleScannerActive ? '#16A34A' : '#2563EB',
+                    color: '#fff', fontSize: '13px', fontWeight: 700,
+                    border: 'none', cursor: 'pointer',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {bleScannerActive ? 'check_circle' : 'play_arrow'}
+                  </span>
+                  {bleScannerActive ? '⚡ Auto-Detecting (<0.5m)' : '⚡ Turn On Auto-Walk Radar'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAutoWalkMode(!autoWalkMode)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '10px 18px', borderRadius: '10px',
+                    background: autoWalkMode ? '#D97706' : '#2563EB',
+                    color: '#fff', fontSize: '13px', fontWeight: 700,
+                    border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {autoWalkMode ? 'pause_circle' : 'directions_walk'}
+                  </span>
+                  {autoWalkMode ? 'Simulating Walk-by...' : '⚡ Simulate Auto-Walk (Web)'}
                 </button>
               )}
             </div>

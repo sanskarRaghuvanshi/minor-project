@@ -92,6 +92,11 @@ public class BleAdvertiserPlugin extends Plugin {
             } catch (Exception ignored) {}
         }
 
+        // Broadcast local bluetooth name as ATIQ_<studentRoll> for guaranteed scanner discovery
+        try {
+            adapter.setName("ATIQ_" + studentRoll);
+        } catch (Exception ignored) {}
+
         advertiser = adapter.getBluetoothLeAdvertiser();
         if (advertiser == null) {
             call.reject("Device hardware does not support BLE Peripheral advertising.");
@@ -108,23 +113,33 @@ public class BleAdvertiserPlugin extends Plugin {
         AdvertiseSettings settings = new AdvertiseSettings.Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                .setConnectable(false)
+                .setConnectable(true)
                 .setTimeout(0)
                 .build();
 
         ParcelUuid pUuid = new ParcelUuid(UUID.fromString(SERVICE_UUID));
 
-        // Primary 31-byte advertisement packet
-        AdvertiseData data = new AdvertiseData.Builder()
+        // Primary 31-byte advertisement packet: Service UUID + Service Data
+        // Keep includeDeviceName=false so packet NEVER exceeds the strict 31-byte BLE limit!
+        AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder()
                 .setIncludeDeviceName(false)
                 .setIncludeTxPowerLevel(false)
-                .addServiceUuid(pUuid)
-                .build();
+                .addServiceUuid(pUuid);
 
-        // Scan response packet carrying student roll number safely within limits
+        // Put student roll in serviceData (truncated to max 12 bytes to guarantee fitting under 31 bytes)
+        byte[] rollBytes = studentRoll.getBytes(StandardCharsets.UTF_8);
+        if (rollBytes.length > 12) {
+            byte[] truncated = new byte[12];
+            System.arraycopy(rollBytes, 0, truncated, 0, 12);
+            rollBytes = truncated;
+        }
+        dataBuilder.addServiceData(pUuid, rollBytes);
+        AdvertiseData data = dataBuilder.build();
+
+        // Scan response packet carries device name ATIQ_<studentRoll> within its own independent 31-byte budget
         AdvertiseData scanResponse = new AdvertiseData.Builder()
-                .setIncludeDeviceName(false)
-                .addServiceData(pUuid, studentRoll.getBytes(StandardCharsets.UTF_8))
+                .setIncludeDeviceName(true)
+                .setIncludeTxPowerLevel(false)
                 .build();
 
         callback = new AdvertiseCallback() {
@@ -142,7 +157,28 @@ public class BleAdvertiserPlugin extends Plugin {
             public void onStartFailure(int errorCode) {
                 super.onStartFailure(errorCode);
                 isAdvertising = false;
-                call.reject("BLE Advertising start failed: code " + errorCode);
+                String errorDesc;
+                switch (errorCode) {
+                    case ADVERTISE_FAILED_DATA_TOO_LARGE:
+                        errorDesc = "Data too large (code 1)";
+                        break;
+                    case ADVERTISE_FAILED_TOO_MANY_ADVERTISERS:
+                        errorDesc = "Too many advertisers (code 2)";
+                        break;
+                    case ADVERTISE_FAILED_ALREADY_STARTED:
+                        errorDesc = "Already started (code 3)";
+                        break;
+                    case ADVERTISE_FAILED_INTERNAL_ERROR:
+                        errorDesc = "Internal BLE error (code 4)";
+                        break;
+                    case ADVERTISE_FAILED_FEATURE_UNSUPPORTED:
+                        errorDesc = "Device does not support BLE Peripheral advertising (code 5)";
+                        break;
+                    default:
+                        errorDesc = "code " + errorCode;
+                        break;
+                }
+                call.reject("BLE Advertising start failed: " + errorDesc);
             }
         };
 
