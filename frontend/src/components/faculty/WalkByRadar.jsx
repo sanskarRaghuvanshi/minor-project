@@ -185,13 +185,16 @@ const WalkByRadar = () => {
           });
         },
         onDeviceHovered: (dev) => {
-          // If nearby device matches an unmarked student in roster
+          // Match detected student beacon to roster
           const roster = activeSession.roster || [];
           const matched = roster.find(
             (s) =>
               !s.isHovered &&
-              (dev.name?.toLowerCase().includes(s.rollNumber?.toLowerCase()) ||
-               dev.name?.toLowerCase().includes(s.name?.toLowerCase()))
+              (
+                (dev.studentRoll && s.rollNumber?.toLowerCase() === dev.studentRoll.toLowerCase()) ||
+                dev.name?.toLowerCase().includes(s.rollNumber?.toLowerCase()) ||
+                dev.name?.toLowerCase().includes(s.name?.toLowerCase())
+              )
           );
           if (matched) {
             handleHoverMark(matched._id, matched.name, dev.distance);
@@ -211,18 +214,23 @@ const WalkByRadar = () => {
     };
   }, [activeSession?.isActive, isNative, handleHoverMark]);
 
-  // Auto-walk simulation: hovers un-hovered students sequentially
+  // Auto-walk simulation: hovers ONLY online students sequentially
   useEffect(() => {
     let timer = null;
     if (autoWalkMode && activeSession && activeSession.roster) {
-      const nextUnmarked = activeSession.roster.find((s) => !s.isHovered);
-      if (nextUnmarked) {
+      const nextUnmarkedOnline = activeSession.roster.find((s) => !s.isHovered && s.isOnline);
+      if (nextUnmarkedOnline) {
         timer = setTimeout(() => {
-          handleHoverMark(nextUnmarked._id, nextUnmarked.name);
+          handleHoverMark(nextUnmarkedOnline._id, nextUnmarkedOnline.name);
         }, 1800);
       } else {
         setAutoWalkMode(false);
-        addToast('All students in class have been detected & marked!', 'success');
+        const hasUnmarked = activeSession.roster.some((s) => !s.isHovered);
+        if (hasUnmarked) {
+          addToast('Finished walk. Remaining unlogged students cannot be auto-marked.', 'info');
+        } else {
+          addToast('All online students have been verified!', 'success');
+        }
       }
     }
     return () => {
@@ -270,6 +278,7 @@ const WalkByRadar = () => {
 
   const totalStudents = activeSession?.totalStudents || activeSession?.roster?.length || 0;
   const hoveredCount = activeSession?.hoveredCount || activeSession?.roster?.filter((s) => s.isHovered).length || 0;
+  const onlineCount = activeSession?.onlineCount || activeSession?.roster?.filter((s) => s.isOnline).length || 0;
   const attendanceRate = totalStudents > 0 ? Math.round((hoveredCount / totalStudents) * 100) : 0;
 
   return (
@@ -317,7 +326,7 @@ const WalkByRadar = () => {
               </span>
             </div>
             <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748B' }}>
-              Walk past student desks with your phone or laptop. Enrolled devices detect your proximity and mark attendance instantly.
+              Walk past student desks with your phone. Only physical student devices actively open on Desk Check-in can be detected.
             </p>
           </div>
         </div>
@@ -548,10 +557,10 @@ const WalkByRadar = () => {
               <div style={{ fontSize: '13px', color: '#166534', lineHeight: 1.5 }}>
                 <strong>Desk Hover Workflow:</strong>
                 <ol style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
-                  <li>Tell students to navigate to <strong>Desk Check-in</strong> on their phones and place them face-up on their desks.</li>
+                  <li>Tell students to open <strong>Desk Check-in</strong> on their phones and place them face-up on their desks.</li>
                   <li>Click <strong>Start Walk-by Radar</strong> below.</li>
                   <li>As you walk row by row, hover near each student&apos;s desk (&lt; 0.5m) to auto-mark them present.</li>
-                  <li>When you finish walking the room, click <strong>Lock & End Session</strong>. Remaining absent students are locked automatically.</li>
+                  <li>Unlogged/offline students cannot be marked. When finished walking, click <strong>Lock & End Session</strong>.</li>
                 </ol>
               </div>
             </div>
@@ -598,7 +607,7 @@ const WalkByRadar = () => {
               <style>{`@keyframes pulseGlow { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }`}</style>
               <div>
                 <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', fontWeight: 700 }}>
-                  Active Walk-by Proximity Session {bleScannerActive ? '• 📡 BLE SCANNING' : ''}
+                  Active Walk-by Proximity Session {bleScannerActive ? '• 📡 BLE ACTIVE' : ''}
                 </div>
                 <div style={{ fontSize: '20px', fontWeight: 800, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {activeSession.subject}
@@ -642,23 +651,21 @@ const WalkByRadar = () => {
               <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Students in roster</div>
             </div>
 
+            <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '14px', border: '1px solid #BFDBFE', boxShadow: '0 2px 6px rgba(37,99,235,0.08)' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: '#2563EB' }}>Online at Desks</div>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>{onlineCount}</div>
+              <div style={{ fontSize: '11px', color: '#3B82F6', marginTop: '2px' }}>Live beacon connected</div>
+            </div>
+
             <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '14px', border: '1px solid #BBF7D0', boxShadow: '0 2px 6px rgba(16,185,129,0.08)' }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: '#059669' }}>Hovered / Present</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: '#059669', marginTop: '4px' }}>{hoveredCount}</div>
               <div style={{ fontSize: '11px', color: '#10B981', marginTop: '2px' }}>&lt; 0.5m desk verified</div>
             </div>
 
-            <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '14px', border: '1px solid #FED7AA', boxShadow: '0 2px 6px rgba(249,115,22,0.05)' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#D97706' }}>Pending Desks</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: '#D97706', marginTop: '4px' }}>
-                {Math.max(0, totalStudents - hoveredCount)}
-              </div>
-              <div style={{ fontSize: '11px', color: '#F59E0B', marginTop: '2px' }}>Awaiting hover pass</div>
-            </div>
-
             <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Attendance Rate</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>{attendanceRate}%</div>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>{attendanceRate}%</div>
               <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Live class completion</div>
             </div>
           </div>
@@ -718,25 +725,27 @@ const WalkByRadar = () => {
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff' }} />
                 </div>
 
-                {/* Dynamic Blips for hovered students */}
+                {/* Dynamic Blips for online & hovered students */}
                 {(activeSession.roster || []).slice(0, 12).map((s, idx) => {
                   const angle = (idx * (360 / Math.min(12, activeSession.roster.length))) * (Math.PI / 180);
                   const radius = 60 + (idx % 3) * 35;
                   const x = Math.cos(angle) * radius;
                   const y = Math.sin(angle) * radius;
 
+                  const color = s.isHovered ? '#10B981' : s.isOnline ? '#38BDF8' : 'rgba(255,255,255,0.15)';
+
                   return (
                     <div
                       key={s._id}
-                      title={`${s.name} - ${s.isHovered ? 'Marked Present' : 'Awaiting'}`}
+                      title={`${s.name} - ${s.isHovered ? 'Marked Present' : s.isOnline ? 'Online at Desk' : 'Offline'}`}
                       style={{
                         position: 'absolute',
                         transform: `translate(${x}px, ${y}px)`,
-                        width: s.isHovered ? '12px' : '8px',
-                        height: s.isHovered ? '12px' : '8px',
+                        width: s.isHovered ? '12px' : s.isOnline ? '10px' : '6px',
+                        height: s.isHovered ? '12px' : s.isOnline ? '10px' : '6px',
                         borderRadius: '50%',
-                        background: s.isHovered ? '#10B981' : 'rgba(255,255,255,0.25)',
-                        boxShadow: s.isHovered ? '0 0 10px #10B981' : 'none',
+                        background: color,
+                        boxShadow: s.isHovered ? '0 0 10px #10B981' : s.isOnline ? '0 0 8px #38BDF8' : 'none',
                         transition: 'all 0.4s ease'
                       }}
                     />
@@ -745,7 +754,7 @@ const WalkByRadar = () => {
               </div>
 
               <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '12px' }}>
-                Center blip: Teacher Scanner • Green dots: Verified desk proximity (&lt; 0.5m)
+                Center blip: Teacher Scanner • Green: Verified (&lt; 0.5m) • Blue: Online Desk
               </div>
 
               {/* Recent BLE hardware signals if any */}
@@ -754,7 +763,7 @@ const WalkByRadar = () => {
                   <div style={{ fontSize: '11px', color: '#38BDF8', fontWeight: 600 }}>Nearby BLE Signals:</div>
                   {recentBlePings.map((p, i) => (
                     <div key={i} style={{ fontSize: '10px', color: '#CBD5E1', display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
-                      <span>{p.name}</span>
+                      <span>{p.studentRoll ? `Roll: ${p.studentRoll}` : p.name}</span>
                       <span>{p.rssi} dBm ({p.distance}m)</span>
                     </div>
                   ))}
@@ -806,16 +815,25 @@ const WalkByRadar = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
                     {filteredRoster.map((student) => {
                       const isHovered = student.isHovered;
+                      const isOnline = student.isOnline;
                       return (
                         <div
                           key={student._id}
                           style={{
                             padding: '14px', borderRadius: '12px',
-                            border: isHovered ? '1.5px solid #10B981' : '1px solid #E2E8F0',
-                            background: isHovered ? '#F0FDF4' : '#FFFFFF',
+                            border: isHovered
+                              ? '1.5px solid #10B981'
+                              : isOnline
+                                ? '1.5px solid #38BDF8'
+                                : '1px solid #E2E8F0',
+                            background: isHovered
+                              ? '#F0FDF4'
+                              : isOnline
+                                ? '#F0F9FF'
+                                : '#FFFFFF',
                             boxShadow: isHovered ? '0 4px 12px rgba(16,185,129,0.08)' : 'none',
                             display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                            gap: '12px', transition: 'all 0.2s'
+                            gap: '12px', transition: 'all 0.2s', opacity: !isHovered && !isOnline ? 0.65 : 1
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -838,46 +856,60 @@ const WalkByRadar = () => {
                                 <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
                                 PRESENT
                               </span>
+                            ) : isOnline ? (
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                padding: '3px 8px', borderRadius: '6px',
+                                background: '#E0F2FE', color: '#0369A1',
+                                fontSize: '11px', fontWeight: 700, border: '1px solid #BAE6FD'
+                              }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>sensors</span>
+                                AT DESK (READY)
+                              </span>
                             ) : (
                               <span style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                                 padding: '3px 8px', borderRadius: '6px',
-                                background: '#F1F5F9', color: '#64748B',
+                                background: '#F1F5F9', color: '#94A3B8',
                                 fontSize: '11px', fontWeight: 600
                               }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>desk</span>
-                                Awaiting Hover
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>phone_disabled</span>
+                                NOT LOGGED IN
                               </span>
                             )}
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                            <div style={{ fontSize: '11px', color: isHovered ? '#059669' : '#94A3B8' }}>
+                            <div style={{ fontSize: '11px', color: isHovered ? '#059669' : isOnline ? '#0284C7' : '#94A3B8' }}>
                               {isHovered ? (
                                 <>
                                   Dist: {student.proximityMeters || '0.28'}m • {student.markedAt ? new Date(student.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Verified'}
                                 </>
+                              ) : isOnline ? (
+                                'Ready for phone hover'
                               ) : (
-                                'Waiting for phone hover'
+                                'Device not at desk'
                               )}
                             </div>
 
                             {!isHovered && (
                               <button
                                 type="button"
-                                disabled={hoveringId === student._id}
-                                onClick={() => handleHoverMark(student._id, student.name)}
+                                disabled={hoveringId === student._id || !isOnline}
+                                onClick={() => isOnline && handleHoverMark(student._id, student.name)}
+                                title={!isOnline ? 'Student is not logged in / phone not at desk' : 'Hover over student desk to mark'}
                                 style={{
                                   display: 'inline-flex', alignItems: 'center', gap: '4px',
                                   padding: '6px 12px', borderRadius: '8px',
-                                  background: '#2563EB', color: '#fff',
+                                  background: !isOnline ? '#E2E8F0' : '#2563EB',
+                                  color: !isOnline ? '#94A3B8' : '#fff',
                                   fontSize: '12px', fontWeight: 700, border: 'none',
-                                  cursor: hoveringId === student._id ? 'not-allowed' : 'pointer',
-                                  boxShadow: '0 2px 6px rgba(37,99,235,0.2)'
+                                  cursor: !isOnline || hoveringId === student._id ? 'not-allowed' : 'pointer',
+                                  boxShadow: !isOnline ? 'none' : '0 2px 6px rgba(37,99,235,0.2)'
                                 }}
                               >
                                 <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>sensors</span>
-                                {hoveringId === student._id ? 'Hovering...' : 'Hover Desk'}
+                                {hoveringId === student._id ? 'Hovering...' : !isOnline ? 'Desk Offline' : 'Hover Desk'}
                               </button>
                             )}
                           </div>

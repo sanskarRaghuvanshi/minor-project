@@ -37,6 +37,7 @@ export const startWalkBySession = async ({
     branch,
     className,
     section: section || '',
+    onlineDesks: [],
     hoveredStudents: [],
     expiresAt,
     isActive: true,
@@ -57,7 +58,7 @@ export const getActiveWalkBySession = async (facultyId) => {
 
   if (!session) return null;
 
-  // Fetch all enrolled students in this class/section to show full roster on radar
+  // Fetch all enrolled students in this class/section
   const studentQuery = {
     role: 'student',
     isActive: true,
@@ -72,6 +73,15 @@ export const getActiveWalkBySession = async (facultyId) => {
     .select('name email rollNumber branch className section')
     .sort({ name: 1 })
     .lean();
+
+  const now = Date.now();
+  const onlineThresholdMs = 25000; // active in last 25s
+  const onlineSet = new Set();
+  (session.onlineDesks || []).forEach((od) => {
+    if (od.student && (now - new Date(od.lastSeen).getTime()) <= onlineThresholdMs) {
+      onlineSet.add(od.student.toString());
+    }
+  });
 
   const hoveredMap = new Map();
   (session.hoveredStudents || []).forEach((h) => {
@@ -88,6 +98,7 @@ export const getActiveWalkBySession = async (facultyId) => {
     name: s.name,
     email: s.email,
     rollNumber: s.rollNumber,
+    isOnline: onlineSet.has(s._id.toString()),
     isHovered: hoveredMap.has(s._id.toString()),
     markedAt: hoveredMap.get(s._id.toString())?.markedAt || null,
     proximityMeters: hoveredMap.get(s._id.toString())?.proximityMeters || null,
@@ -97,8 +108,42 @@ export const getActiveWalkBySession = async (facultyId) => {
     ...session,
     roster,
     totalStudents: allStudents.length,
+    onlineCount: onlineSet.size,
     hoveredCount: hoveredMap.size,
   };
+};
+
+export const pingDeskHeartbeat = async (studentId) => {
+  const student = await User.findById(studentId).lean();
+  if (!student) return false;
+
+  const query = {
+    isActive: true,
+    branch: student.branch,
+    className: student.className,
+  };
+  if (student.section) {
+    query.section = student.section;
+  }
+
+  const session = await WalkBySession.findOne(query);
+  if (!session) return false;
+
+  const existingIdx = (session.onlineDesks || []).findIndex(
+    (od) => od.student?.toString() === studentId.toString(),
+  );
+
+  if (existingIdx >= 0) {
+    session.onlineDesks[existingIdx].lastSeen = new Date();
+  } else {
+    session.onlineDesks.push({
+      student: studentId,
+      lastSeen: new Date(),
+    });
+  }
+
+  await session.save();
+  return true;
 };
 
 export const getActiveSessionForStudent = async (studentId) => {
@@ -116,10 +161,23 @@ export const getActiveSessionForStudent = async (studentId) => {
 
   const session = await WalkBySession.findOne(query)
     .populate('faculty', 'name email department')
-    .sort({ createdAt: -1 })
-    .lean();
+    .sort({ createdAt: -1 });
 
   if (!session) return { hasActiveSession: false };
+
+  // Update heartbeat automatically on status poll
+  const existingIdx = (session.onlineDesks || []).findIndex(
+    (od) => od.student?.toString() === studentId.toString(),
+  );
+  if (existingIdx >= 0) {
+    session.onlineDesks[existingIdx].lastSeen = new Date();
+  } else {
+    session.onlineDesks.push({
+      student: studentId,
+      lastSeen: new Date(),
+    });
+  }
+  await session.save();
 
   const isHovered = (session.hoveredStudents || []).some(
     (h) => h.student?.toString() === studentId.toString(),
@@ -153,6 +211,14 @@ export const hoverMarkStudent = async ({
   if (!student || !student.isActive) {
     throw new ApiError('Student not found or inactive', 404, 'NOT_FOUND');
   }
+
+  // Check if student is active at desk or within valid BLE range
+  const now = Date.now();
+  const isOnline = (session.onlineDesks || []).some(
+    (od) =>
+      od.student?.toString() === studentId.toString() &&
+      (now - new Date(od.lastSeen).getTime()) <= 35000,
+  );
 
   // Check if student already hovered in this session
   const alreadyHovered = session.hoveredStudents.some(
@@ -199,7 +265,7 @@ export const hoverMarkStudent = async ({
     });
 
     logger.info(
-      { sessionToken, studentId, subject: session.subject, proximityMeters },
+      { sessionToken, studentId, subject: session.subject, proximityMeters, isOnline },
       'Student auto-marked via desk hover',
     );
   }

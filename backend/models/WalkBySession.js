@@ -59,6 +59,18 @@ const walkBySessionSchema = new Schema(
       type: String,
       default: 'Room B05',
     },
+    onlineDesks: [
+      {
+        student: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        lastSeen: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     hoveredStudents: [
       {
         student: {

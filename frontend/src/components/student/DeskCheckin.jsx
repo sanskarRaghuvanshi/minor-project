@@ -3,6 +3,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { ENDPOINTS } from '../../api/endpoints';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../common/Toast';
+import { isNativePlatform, startStudentBleBeacon, stopStudentBleBeacon } from '../../utils/bleProximity';
 
 const DeskCheckin = () => {
   const { user } = useAuth();
@@ -10,12 +11,13 @@ const DeskCheckin = () => {
 
   const [statusData, setStatusData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [markedCelebrated, setMarkedCelebrated] = useState(false);
+  const [bleBroadcasting, setBleBroadcasting] = useState(false);
+  const [isNative] = useState(() => isNativePlatform());
 
   const prevIsHoveredRef = useRef(false);
   const pollTimerRef = useRef(null);
 
-  // Poll status from server
+  // Poll status from server (acts as live presence heartbeat)
   const checkWalkByStatus = useCallback(async (quiet = false) => {
     try {
       if (!quiet) setLoading(true);
@@ -27,7 +29,6 @@ const DeskCheckin = () => {
         // Check if just changed from unhovered -> hovered
         if (data.isHovered && !prevIsHoveredRef.current) {
           prevIsHoveredRef.current = true;
-          setMarkedCelebrated(true);
           // Purely tactile vibration feedback - ZERO AUDIO
           if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
             navigator.vibrate([100, 50, 100]);
@@ -50,7 +51,7 @@ const DeskCheckin = () => {
 
   useEffect(() => {
     checkWalkByStatus();
-    // Poll every 2.5 seconds
+    // Poll every 2.5 seconds (sends heartbeat to radar)
     pollTimerRef.current = setInterval(() => {
       checkWalkByStatus(true);
     }, 2500);
@@ -59,6 +60,20 @@ const DeskCheckin = () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
   }, [checkWalkByStatus]);
+
+  // Turn on Bluetooth BLE Peripheral Advertising on desk
+  useEffect(() => {
+    if (isNative && user?.rollNumber) {
+      startStudentBleBeacon(user.rollNumber).then((started) => {
+        setBleBroadcasting(!!started);
+      });
+    }
+
+    return () => {
+      stopStudentBleBeacon();
+      setBleBroadcasting(false);
+    };
+  }, [isNative, user?.rollNumber]);
 
   const hasActive = statusData?.hasActiveSession;
   const isHovered = statusData?.isHovered;
@@ -88,6 +103,17 @@ const DeskCheckin = () => {
         <p style={{ margin: '6px 0 0', fontSize: '14px', color: '#64748B' }}>
           Place your phone face-up on your desk. Attendance is verified automatically when the teacher hovers past.
         </p>
+
+        {bleBroadcasting && (
+          <div style={{
+            marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '4px 12px', borderRadius: '12px', background: '#F0FDF4',
+            border: '1px solid #BBF7D0', color: '#16A34A', fontSize: '12px', fontWeight: 600
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bluetooth_searching</span>
+            BLE Desk Beacon Active • Roll: {user?.rollNumber}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -172,7 +198,7 @@ const DeskCheckin = () => {
           {/* Concentric Pulsing Radar Visual */}
           <div style={{
             position: 'relative', width: '150px', height: '150px',
-            margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            margin: '0 auto 24px', display: 'center', alignItems: 'center', justifyContent: 'center'
           }}>
             <div style={{
               position: 'absolute', width: '100%', height: '100%', borderRadius: '50%',
@@ -186,7 +212,7 @@ const DeskCheckin = () => {
               position: 'relative', width: '64px', height: '64px', borderRadius: '50%',
               background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
               color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 6px 16px rgba(2,132,199,0.35)'
+              boxShadow: '0 6px 16px rgba(2,132,199,0.35)', margin: '43px auto'
             }}>
               <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
                 sensors
@@ -214,7 +240,7 @@ const DeskCheckin = () => {
             color: '#0284C7', fontSize: '13px', fontWeight: 600, border: '1px solid #BAE6FD'
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>desk</span>
-            Waiting for teacher to hover over your desk (&lt; 0.5m)
+            Desk beacon active • Waiting for teacher to hover over your desk (&lt; 0.5m)
           </div>
         </div>
       ) : (
@@ -273,7 +299,7 @@ const DeskCheckin = () => {
           <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>lightbulb</span>
         </div>
         <div style={{ fontSize: '12px', color: '#475569', lineHeight: 1.4 }}>
-          <strong>How Walk-by Proximity Works:</strong> You don&apos;t need to scan any QR code or enter codes. When your teacher approaches within 0.5m of your desk, your attendance is logged automatically.
+          <strong>How Walk-by Proximity Works:</strong> You don&apos;t need to scan any QR code. When you open this screen, your desk beacon turns on. As the teacher hovers within 0.5m of your desk, your attendance is verified.
         </div>
       </div>
     </div>
