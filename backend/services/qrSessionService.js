@@ -9,13 +9,6 @@ import calculateDistanceMeters from '../utils/haversine.js';
 
 const QR_SESSION_TTL_MINUTES = Number(process.env.QR_SESSION_TTL_MINUTES) || 10;
 
-// Bluetooth RSSI Range Presets (in dBm)
-export const BLE_RANGE_THRESHOLDS = {
-  close: -60,     // ~1-3 meters
-  standard: -75,  // ~5-10 meters (Standard classroom)
-  hall: -88,      // ~15-25 meters (Large auditorium)
-};
-
 export const createQrSession = async ({
   facultyId,
   subject,
@@ -29,24 +22,11 @@ export const createQrSession = async ({
   branch,
   className,
   section,
-  bluetoothEnabled = false,
-  bluetoothRange = 'standard',
-  bluetoothRssiThreshold = -75,
-  bluetoothBeaconId = null,
 }) => {
   const sessionToken = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + QR_SESSION_TTL_MINUTES * 60 * 1000);
 
   const hasLocation = lat !== null && lng !== null && !isNaN(Number(lat)) && !isNaN(Number(lng));
-
-  const isBleActive = Boolean(bluetoothEnabled);
-  const beaconId = isBleActive
-    ? (bluetoothBeaconId || `BLE-${crypto.randomBytes(3).toString('hex').toUpperCase()}`)
-    : null;
-
-  const rssiThreshold = isBleActive
-    ? (Number(bluetoothRssiThreshold) || BLE_RANGE_THRESHOLDS[bluetoothRange] || -75)
-    : -75;
 
   const session = await QrSession.create({
     sessionToken,
@@ -64,10 +44,6 @@ export const createQrSession = async ({
         }
       : undefined,
     geoFencingEnabled: hasLocation,
-    bluetoothEnabled: isBleActive,
-    bluetoothRange: bluetoothRange || 'standard',
-    bluetoothRssiThreshold: rssiThreshold,
-    bluetoothBeaconId: beaconId,
     expiresAt,
     branch,
     className,
@@ -77,17 +53,7 @@ export const createQrSession = async ({
   });
 
   logger.info(
-    {
-      sessionToken,
-      facultyId,
-      subject,
-      date,
-      slotNumber,
-      geoFencingEnabled: hasLocation,
-      bluetoothEnabled: isBleActive,
-      bluetoothBeaconId: beaconId,
-      bluetoothRssiThreshold: rssiThreshold,
-    },
+    { sessionToken, facultyId, subject, date, slotNumber, geoFencingEnabled: hasLocation },
     'QR session created',
   );
 
@@ -112,7 +78,6 @@ export const scanAndMarkAttendance = async (
   ipAddress,
   userAgent,
   studentLocation = {},
-  bluetoothProof = null,
 ) => {
   const session = await QrSession.findOne({ sessionToken, isActive: true });
   if (!session) {
@@ -150,7 +115,7 @@ export const scanAndMarkAttendance = async (
     );
   }
 
-  // 1. Geo-fencing verification check
+  // Geo-fencing verification check
   let measuredDistance = null;
   if (session.geoFencingEnabled && session.location?.lat != null && session.location?.lng != null) {
     const sLat = studentLocation?.lat;
@@ -183,38 +148,6 @@ export const scanAndMarkAttendance = async (
     }
   }
 
-  // 2. Bluetooth Proximity verification check
-  let measuredRssi = null;
-  if (session.bluetoothEnabled) {
-    if (!bluetoothProof || !bluetoothProof.beaconId) {
-      throw new ApiError(
-        'Bluetooth proximity check is required by faculty. Please turn ON Bluetooth on your phone and hold it near the scanner.',
-        403,
-        'BLUETOOTH_REQUIRED',
-      );
-    }
-
-    if (bluetoothProof.beaconId !== session.bluetoothBeaconId) {
-      throw new ApiError(
-        'Bluetooth session mismatch: Your device did not detect the teacher\'s active classroom beacon.',
-        403,
-        'BLUETOOTH_MISMATCH',
-      );
-    }
-
-    measuredRssi = Number(bluetoothProof.rssi);
-    const minThreshold = Number(session.bluetoothRssiThreshold) || -75;
-
-    // In dBm, e.g. -65 is stronger than -75. -88 is weaker than -75.
-    if (!isNaN(measuredRssi) && measuredRssi < minThreshold) {
-      throw new ApiError(
-        `Bluetooth range violation: Signal strength (${measuredRssi} dBm) is too weak for the ${session.bluetoothRange || 'standard'} classroom threshold (Required: ≥ ${minThreshold} dBm). Attendance must be scanned physically inside the room.`,
-        403,
-        'BLUETOOTH_OUT_OF_RANGE',
-      );
-    }
-  }
-
   const alreadyScanned = session.scannedStudents.some(
     (s) => s.student.toString() === studentId.toString(),
   );
@@ -226,8 +159,6 @@ export const scanAndMarkAttendance = async (
         subject: session.subject,
         date: session.date,
         slotNumber: session.slotNumber,
-        bluetoothEnabled: session.bluetoothEnabled,
-        geoFencingEnabled: session.geoFencingEnabled,
       },
       student: {
         id: student._id,
@@ -236,7 +167,6 @@ export const scanAndMarkAttendance = async (
       },
       alreadyScanned: true,
       distance: measuredDistance,
-      bluetoothRssi: measuredRssi,
       message: 'Attendance already recorded for this session',
     };
   }
@@ -278,22 +208,14 @@ export const scanAndMarkAttendance = async (
       slotNumber: session.slotNumber || 1,
       status: 'present',
       distance: measuredDistance,
-      bluetoothRssi: measuredRssi,
     },
     ipAddress,
     userAgent,
   });
 
   logger.info(
-    {
-      sessionToken,
-      studentId,
-      subject: session.subject,
-      slotNumber: session.slotNumber,
-      measuredDistance,
-      measuredRssi,
-    },
-    'QR attendance marked with proximity proof',
+    { sessionToken, studentId, subject: session.subject, slotNumber: session.slotNumber, measuredDistance },
+    'QR attendance marked',
   );
 
   return {
@@ -303,8 +225,6 @@ export const scanAndMarkAttendance = async (
       date: session.date,
       slotNumber: session.slotNumber,
       geoFencingEnabled: session.geoFencingEnabled,
-      bluetoothEnabled: session.bluetoothEnabled,
-      bluetoothRange: session.bluetoothRange,
     },
     student: {
       id: student._id,
@@ -312,7 +232,6 @@ export const scanAndMarkAttendance = async (
       email: student.email,
     },
     distance: measuredDistance,
-    bluetoothRssi: measuredRssi,
     scannedAt: session.scannedStudents[session.scannedStudents.length - 1].scannedAt,
   };
 };

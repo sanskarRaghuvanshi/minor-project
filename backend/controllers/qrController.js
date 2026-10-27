@@ -41,10 +41,6 @@ export const generateQr = catchAsync(async (req, res) => {
     branch,
     className,
     section,
-    bluetoothEnabled = false,
-    bluetoothRange = 'standard',
-    bluetoothRssiThreshold = -75,
-    bluetoothBeaconId = null,
   } = req.body;
   const faculty = req.user;
 
@@ -61,10 +57,6 @@ export const generateQr = catchAsync(async (req, res) => {
     branch: branch || faculty.branch,
     className: className || faculty.className,
     section: section !== undefined ? section : faculty.section,
-    bluetoothEnabled: Boolean(bluetoothEnabled),
-    bluetoothRange: bluetoothRange || 'standard',
-    bluetoothRssiThreshold: Number(bluetoothRssiThreshold) || -75,
-    bluetoothBeaconId,
   });
 
   const qrData = JSON.stringify({
@@ -74,10 +66,6 @@ export const generateQr = catchAsync(async (req, res) => {
     slotNumber: session.slotNumber,
     timeSlot: session.timeSlot,
     geoFencingEnabled: session.geoFencingEnabled,
-    bluetoothEnabled: session.bluetoothEnabled,
-    bluetoothBeaconId: session.bluetoothBeaconId,
-    bluetoothRange: session.bluetoothRange,
-    bluetoothRssiThreshold: session.bluetoothRssiThreshold,
   });
 
   const qrDataUrl = await QRCode.toDataURL(qrData, {
@@ -95,8 +83,6 @@ export const generateQr = catchAsync(async (req, res) => {
       facultyId: faculty._id,
       slotNumber: session.slotNumber,
       geoFencingEnabled: session.geoFencingEnabled,
-      bluetoothEnabled: session.bluetoothEnabled,
-      bluetoothBeaconId: session.bluetoothBeaconId,
     },
     'QR code generated',
   );
@@ -119,10 +105,6 @@ export const generateQr = catchAsync(async (req, res) => {
         section: session.section,
         geoFencingEnabled: session.geoFencingEnabled,
         location: session.location,
-        bluetoothEnabled: session.bluetoothEnabled,
-        bluetoothBeaconId: session.bluetoothBeaconId,
-        bluetoothRange: session.bluetoothRange,
-        bluetoothRssiThreshold: session.bluetoothRssiThreshold,
       },
     },
     meta: null,
@@ -222,7 +204,7 @@ export const scanAttendance = catchAsync(async (req, res) => {
     });
   }
 
-  const { sessionToken, lat, lng, bluetoothProof } = req.body;
+  const { sessionToken, lat, lng } = req.body;
   const studentId = req.user._id;
 
   const result = await scanAndMarkAttendance(
@@ -231,7 +213,6 @@ export const scanAttendance = catchAsync(async (req, res) => {
     req.ip,
     req.headers['user-agent'],
     { lat, lng },
-    bluetoothProof,
   );
 
   res.status(200).json({

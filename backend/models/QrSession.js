@@ -77,23 +77,6 @@ const qrSessionSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    bluetoothEnabled: {
-      type: Boolean,
-      default: false,
-    },
-    bluetoothRange: {
-      type: String,
-      enum: ['close', 'standard', 'hall', 'custom'],
-      default: 'standard',
-    },
-    bluetoothRssiThreshold: {
-      type: Number,
-      default: -75, // dBm threshold (e.g. -60 for 3m, -75 for 10m, -88 for 25m)
-    },
-    bluetoothBeaconId: {
-      type: String,
-      default: null,
-    },
     scannedStudents: [
       {
         student: {

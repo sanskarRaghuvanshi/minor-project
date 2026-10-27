@@ -7,12 +7,6 @@ import { ENDPOINTS } from '../../api/endpoints';
 import { useToast } from '../common/Toast';
 import { LECTURE_SLOTS } from '../../utils/timetableSlots';
 
-const BLE_RANGES = [
-  { id: 'close', label: 'Close Proximity', dist: '~3m', rssi: -60, icon: 'near_me', desc: 'Lab desk / 1-3m' },
-  { id: 'standard', label: 'Standard Room', dist: '~10m', rssi: -75, icon: 'meeting_room', desc: 'Classroom / 5-10m' },
-  { id: 'hall', label: 'Auditorium', dist: '~25m', rssi: -88, icon: 'domain', desc: 'Lecture Hall / 15-25m' },
-];
-
 const POPULAR_ROOMS = [
   'Room B05',
   'Room 101',
@@ -42,9 +36,7 @@ const QrGenerator = () => {
   // Geo-fencing state
   const [geoEnabled, setGeoEnabled] = useState(true);
   const [location, setLocation] = useState(null);
-  const [locStatus, setLocStatus] = useState('idle');
-  const [bluetoothEnabled, setBluetoothEnabled] = useState(false);
-  const [bluetoothRange, setBluetoothRange] = useState('standard'); // 'idle' | 'detecting' | 'ready' | 'denied' | 'unsupported'
+  const [locStatus, setLocStatus] = useState('idle'); // 'idle' | 'detecting' | 'ready' | 'denied' | 'unsupported'
 
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
@@ -147,10 +139,6 @@ const QrGenerator = () => {
         payload.lat = location.lat;
         payload.lng = location.lng;
       }
-
-      payload.bluetoothEnabled = bluetoothEnabled;
-      payload.bluetoothRange = bluetoothRange;
-      payload.bluetoothRssiThreshold = BLE_RANGES.find((r) => r.id === bluetoothRange)?.rssi || -75;
 
       const { data } = await axiosInstance.post(ENDPOINTS.FACULTY.QR_GENERATE, payload);
 
@@ -398,100 +386,7 @@ const QrGenerator = () => {
               </span>
               Geo-Fence: {geoEnabled ? 'ON' : 'OFF'}
             </button>
-
-            {/* Bluetooth Proximity Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setBluetoothEnabled((prev) => !prev)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '10px',
-                background: bluetoothEnabled ? '#EEF2FF' : '#F8FAFC',
-                border: `1px solid ${bluetoothEnabled ? '#C7D2FE' : '#E2E8F0'}`,
-                color: bluetoothEnabled ? '#4338CA' : '#64748B',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-              title="Click to toggle Bluetooth proximity range checking"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
-                {bluetoothEnabled ? 'bluetooth' : 'bluetooth_disabled'}
-              </span>
-              Bluetooth: {bluetoothEnabled ? 'ON' : 'OFF'}
-            </button>
           </div>
-
-          {/* Bluetooth Range Selector Section when ON */}
-          {bluetoothEnabled && (
-            <div
-              style={{
-                marginTop: '14px',
-                padding: '12px 16px',
-                background: 'linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)',
-                borderRadius: '16px',
-                border: '1px solid #C7D2FE',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="material-symbols-outlined" style={{ color: '#4F46E5', fontSize: '20px' }}>
-                    settings_remote
-                  </span>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#312E81' }}>
-                    Teacher Bluetooth Broadcast Range
-                  </span>
-                </div>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#4338CA', background: '#fff', padding: '2px 8px', borderRadius: '6px', border: '1px solid #C7D2FE' }}>
-                  Coverage: {BLE_RANGES.find((r) => r.id === bluetoothRange)?.label} ({BLE_RANGES.find((r) => r.id === bluetoothRange)?.dist} • ≥{BLE_RANGES.find((r) => r.id === bluetoothRange)?.rssi} dBm)
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {BLE_RANGES.map((r) => {
-                  const isSel = bluetoothRange === r.id;
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setBluetoothRange(r.id)}
-                      style={{
-                        flex: 1,
-                        minWidth: '150px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 14px',
-                        borderRadius: '12px',
-                        border: isSel ? '2px solid #4F46E5' : '1px solid #E0E7FF',
-                        background: isSel ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
-                        color: isSel ? '#312E81' : '#6B7280',
-                        fontWeight: isSel ? 800 : 600,
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        boxShadow: isSel ? '0 2px 8px rgba(79, 70, 229, 0.18)' : 'none',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: '18px', color: isSel ? '#4F46E5' : '#9CA3AF' }}>
-                        {r.icon}
-                      </span>
-                      <div style={{ textAlign: 'left', lineHeight: 1.2 }}>
-                        <div>{r.label} ({r.dist})</div>
-                        <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>{r.desc}</div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         <div
@@ -929,11 +824,6 @@ const QrGenerator = () => {
                     subject: sessionData.session?.subject || subject,
                     date: sessionData.session?.date || date,
                     room: sessionData.session?.room || room,
-                    bluetoothEnabled: sessionData.session?.bluetoothEnabled,
-                    bluetoothBeaconId: sessionData.session?.bluetoothBeaconId,
-                    bluetoothRange: sessionData.session?.bluetoothRange,
-                    bluetoothRssiThreshold: sessionData.session?.bluetoothRssiThreshold,
-                    geoFencingEnabled: sessionData.session?.geoFencingEnabled,
                   })}
                   size={190}
                   level="M"
@@ -1109,36 +999,6 @@ const QrGenerator = () => {
                     }}
                   >
                     {sessionData.session?.geoFencingEnabled ? '50m Active ✓' : 'Disabled'}
-                  </strong>
-                </div>
-                <div
-                  style={{
-                    background: '#fff',
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    border: '1px solid #F1F5F9',
-                  }}
-                >
-                  <span
-                    style={{
-                      color: '#94A3B8',
-                      display: 'block',
-                      fontSize: '10px',
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Bluetooth
-                  </span>
-                  <strong
-                    style={{
-                      color: sessionData.session?.bluetoothEnabled ? '#4F46E5' : '#64748B',
-                      fontSize: '13px',
-                    }}
-                  >
-                    {sessionData.session?.bluetoothEnabled
-                      ? `${sessionData.session.bluetoothRange || 'Standard'} (≥${sessionData.session.bluetoothRssiThreshold || -75}dBm)`
-                      : 'Disabled'}
                   </strong>
                 </div>
               </div>

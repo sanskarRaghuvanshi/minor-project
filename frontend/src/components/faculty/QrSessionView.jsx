@@ -146,11 +146,6 @@ const QrSessionView = () => {
                   sessionToken: session?.sessionToken,
                   subject: session?.subject,
                   date: session?.date,
-                  bluetoothEnabled: session?.bluetoothEnabled,
-                  bluetoothBeaconId: session?.bluetoothBeaconId,
-                  bluetoothRange: session?.bluetoothRange,
-                  bluetoothRssiThreshold: session?.bluetoothRssiThreshold,
-                  geoFencingEnabled: session?.geoFencingEnabled,
                 })}
                 size={230}
                 level="M"
