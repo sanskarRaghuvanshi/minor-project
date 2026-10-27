@@ -196,7 +196,7 @@ export const startBleRadarScan = async ({ onDeviceDetected, onDeviceHovered, onE
 
         onDeviceDetected?.(payload);
 
-        // Immediate hover mark when physically within <= 0.5m
+        // Immediate hover mark ONLY when physically within <= 0.5m
         if (distance <= DESK_HOVER_DISTANCE_THRESHOLD) {
           onDeviceHovered?.(payload);
         }
@@ -227,18 +227,28 @@ export const stopBleRadarScan = async () => {
 
 /**
  * Targeted Proximity Listen for a specific Student:
- * Used when teacher hovers specifically over a student desk.
+ * Used when teacher clicks "Hover Desk" specifically over a student desk.
  * Listens for up to timeoutMs for the student's BLE packet.
+ * STRICT: If no signal is received within 0.5m, it FAILS (NO fake fallbacks!).
  */
-export const listenForStudentSignal = async (targetRoll, timeoutMs = 2500) => {
+export const listenForStudentSignal = async (targetRoll, timeoutMs = 3500) => {
   if (!isNativePlatform() || !targetRoll) {
-    // Simulated measurement on web for demo
-    const simulatedDist = Number((Math.random() * 0.25 + 0.18).toFixed(2));
-    return { success: true, distance: simulatedDist, mode: 'web-proximity' };
+    return {
+      success: false,
+      error: 'NOT_NATIVE_BLE',
+      message: 'Native Bluetooth required for physical proximity detection.',
+    };
   }
 
   try {
-    await ensureBluetoothEnabled();
+    const isEnabled = await ensureBluetoothEnabled();
+    if (!isEnabled) {
+      return {
+        success: false,
+        error: 'BLUETOOTH_OFF',
+        message: 'Bluetooth is turned off. Please turn on Bluetooth.',
+      };
+    }
 
     return new Promise((resolve) => {
       let resolved = false;
@@ -247,12 +257,18 @@ export const listenForStudentSignal = async (targetRoll, timeoutMs = 2500) => {
       const timer = setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          // Fallback measurement if already nearby
-          resolve({ success: true, distance: 0.32, mode: 'ble-timeout-fallback' });
+          try {
+            BleClient.stopLEScan().catch(() => {});
+          } catch (e) {}
+          resolve({
+            success: false,
+            error: 'NOT_IN_RANGE',
+            message: `No Bluetooth signal received from Roll ${targetRoll}. Student device must be physically within < 0.5m!`,
+          });
         }
       }, timeoutMs);
 
-      // Start targeted scan
+      // Start targeted low-latency scan
       BleClient.requestLEScan(
         {
           services: [ATTENDIQ_SERVICE_UUID],
@@ -262,25 +278,43 @@ export const listenForStudentSignal = async (targetRoll, timeoutMs = 2500) => {
         (result) => {
           const roll = extractRollFromServiceData(result);
           if (roll && roll.toLowerCase().trim() === normalizedTarget) {
-            if (!resolved) {
-              resolved = true;
-              clearTimeout(timer);
-              const dist = calculateDistanceMeters(result.rssi);
-              BleClient.stopLEScan().catch(() => {});
-              resolve({ success: true, distance: Math.min(dist, 0.45), mode: 'ble-signal-acquired', rssi: result.rssi });
+            const dist = calculateDistanceMeters(result.rssi);
+            // STRICT: Must be physically within desk hover threshold (<= 0.5m)
+            if (dist <= DESK_HOVER_DISTANCE_THRESHOLD) {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timer);
+                try {
+                  BleClient.stopLEScan().catch(() => {});
+                } catch (e) {}
+                resolve({
+                  success: true,
+                  distance: dist,
+                  rssi: result.rssi,
+                  mode: 'ble-signal-acquired',
+                });
+              }
             }
           }
         },
-      ).catch(() => {
+      ).catch((err) => {
         if (!resolved) {
           resolved = true;
           clearTimeout(timer);
-          resolve({ success: true, distance: 0.28, mode: 'ble-scan-fallback' });
+          resolve({
+            success: false,
+            error: 'SCAN_FAILED',
+            message: err?.message || 'Bluetooth scan failed',
+          });
         }
       });
     });
   } catch (err) {
     console.warn('listenForStudentSignal error:', err);
-    return { success: true, distance: 0.3, mode: 'fallback' };
+    return {
+      success: false,
+      error: 'BLE_ERROR',
+      message: err?.message || 'Bluetooth error',
+    };
   }
 };

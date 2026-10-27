@@ -161,6 +161,12 @@ const WalkByRadar = () => {
   const handleHoverMark = useCallback(async (studentId, studentName, measuredDist) => {
     const currentSession = activeSessionRef.current;
     if (!currentSession?.sessionToken) return;
+
+    if (isNative && (!measuredDist || Number(measuredDist) > 0.5)) {
+      addToast('Rejected: Proximity must be within 0.5m desk hover range.', 'error');
+      return;
+    }
+
     try {
       setHoveringId(studentId);
       const proximityMeters = measuredDist || (Math.random() * 0.25 + 0.18).toFixed(2);
@@ -186,7 +192,7 @@ const WalkByRadar = () => {
     } finally {
       setHoveringId(null);
     }
-  }, [addToast, fetchActiveSession]);
+  }, [isNative, addToast, fetchActiveSession]);
 
   // Click on student card "Hover Desk" button
   const triggerHoverForStudent = async (student) => {
@@ -197,19 +203,28 @@ const WalkByRadar = () => {
 
     setHoveringId(student._id);
     try {
-      let measuredDist = null;
       if (isNative) {
-        // Auto-turn on Bluetooth and listen for student signal
+        // STRICT: Must receive genuine Bluetooth signal from student's phone
         await ensureBluetoothEnabled();
-        const sig = await listenForStudentSignal(student.rollNumber, 2000);
-        if (sig?.distance) {
-          measuredDist = sig.distance;
-        }
-      }
+        addToast(`Scanning for ${student.name}'s Bluetooth signal...`, 'info');
+        const sig = await listenForStudentSignal(student.rollNumber, 3500);
 
-      await handleHoverMark(student._id, student.name, measuredDist);
+        if (!sig.success || !sig.distance || Number(sig.distance) > 0.5) {
+          addToast(
+            sig.message || `No Bluetooth signal detected for ${student.name} (${student.rollNumber}). Device must be physically within < 0.5m!`,
+            'error'
+          );
+          return; // STOP! DO NOT MARK!
+        }
+
+        await handleHoverMark(student._id, student.name, sig.distance);
+      } else {
+        // Web browser demo: only allowed when testing locally on computer
+        await handleHoverMark(student._id, student.name);
+      }
     } catch (err) {
       console.error('Hover trigger error:', err);
+      addToast('Bluetooth proximity check failed', 'error');
     } finally {
       setHoveringId(null);
     }
@@ -704,23 +719,25 @@ const WalkByRadar = () => {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => setAutoWalkMode(!autoWalkMode)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '9px 16px', borderRadius: '10px',
-                  background: autoWalkMode ? '#D97706' : 'rgba(255,255,255,0.1)',
-                  color: '#fff', fontSize: '13px', fontWeight: 600,
-                  border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                  {autoWalkMode ? 'pause_circle' : 'directions_walk'}
-                </span>
-                {autoWalkMode ? 'Simulating Walk-by...' : 'Simulate Walk-by'}
-              </button>
+              {!isNative && (
+                <button
+                  type="button"
+                  onClick={() => setAutoWalkMode(!autoWalkMode)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '9px 16px', borderRadius: '10px',
+                    background: autoWalkMode ? '#D97706' : 'rgba(255,255,255,0.1)',
+                    color: '#fff', fontSize: '13px', fontWeight: 600,
+                    border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {autoWalkMode ? 'pause_circle' : 'directions_walk'}
+                  </span>
+                  {autoWalkMode ? 'Simulating Walk-by...' : 'Simulate Walk-by (Web Only)'}
+                </button>
+              )}
             </div>
           </div>
 

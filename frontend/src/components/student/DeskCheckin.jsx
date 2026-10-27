@@ -61,14 +61,29 @@ const DeskCheckin = () => {
     };
   }, [checkWalkByStatus]);
 
+  const [beaconError, setBeaconError] = useState(null);
+
   // Turn on Bluetooth BLE Peripheral Advertising on desk
   const activateDeskBeacon = useCallback(async () => {
     if (!isNative || !user?.rollNumber) return false;
-    await ensureBluetoothEnabled();
-    const started = await startStudentBleBeacon(user.rollNumber);
-    setBleBroadcasting(!!started);
-    return started;
-  }, [isNative, user?.rollNumber]);
+    setBeaconError(null);
+    try {
+      await ensureBluetoothEnabled();
+      const started = await startStudentBleBeacon(user.rollNumber);
+      setBleBroadcasting(!!started);
+      if (started) {
+        addToast('BLE Desk Beacon active! Roll broadcasting.', 'success');
+      }
+      return started;
+    } catch (err) {
+      console.warn('activateDeskBeacon error:', err);
+      const msg = err?.message || err?.toString() || 'Bluetooth activation failed';
+      setBeaconError(msg);
+      addToast(msg.includes('permission') || msg.includes('Nearby') ? 'Please grant Nearby Devices / Bluetooth permission' : msg, 'error');
+      setBleBroadcasting(false);
+      return false;
+    }
+  }, [isNative, user?.rollNumber, addToast]);
 
   useEffect(() => {
     let mounted = true;
@@ -117,27 +132,32 @@ const DeskCheckin = () => {
         {bleBroadcasting ? (
           <div style={{
             marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '4px 12px', borderRadius: '12px', background: '#F0FDF4',
-            border: '1px solid #BBF7D0', color: '#16A34A', fontSize: '12px', fontWeight: 600
+            padding: '6px 14px', borderRadius: '12px', background: '#F0FDF4',
+            border: '1px solid #BBF7D0', color: '#16A34A', fontSize: '12px', fontWeight: 700
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bluetooth_searching</span>
             BLE Desk Beacon Active • Roll: {user?.rollNumber}
           </div>
         ) : isNative && user?.rollNumber ? (
-          <div style={{ marginTop: '10px' }}>
+          <div style={{ marginTop: '12px' }}>
             <button
               type="button"
               onClick={activateDeskBeacon}
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                padding: '5px 14px', borderRadius: '12px', background: '#EFF6FF',
-                border: '1px solid #BFDBFE', color: '#2563EB', fontSize: '12px', fontWeight: 700,
-                cursor: 'pointer'
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '10px 18px', borderRadius: '12px', background: '#2563EB',
+                border: 'none', color: '#FFFFFF', fontSize: '13px', fontWeight: 700,
+                cursor: 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.25)'
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bluetooth</span>
-              Turn On Bluetooth Desk Beacon
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>bluetooth</span>
+              Grant Bluetooth Permission & Start Desk Beacon
             </button>
+            {beaconError && (
+              <p style={{ fontSize: '12px', color: '#EF4444', margin: '6px 0 0', fontWeight: 600 }}>
+                {beaconError}
+              </p>
+            )}
           </div>
         ) : null}
       </div>

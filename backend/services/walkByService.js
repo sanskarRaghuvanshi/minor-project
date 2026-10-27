@@ -228,6 +228,15 @@ export const hoverMarkStudent = async ({
     );
   }
 
+  // Enforce strictly <= 0.5m desk proximity
+  if (Number(proximityMeters) > 0.5) {
+    throw new ApiError(
+      `Cannot mark attendance: Measured proximity (${proximityMeters}m) exceeds 0.5m desk hover threshold.`,
+      400,
+      'PROXIMITY_EXCEEDED'
+    );
+  }
+
   // Check if student already hovered in this session
   const alreadyHovered = session.hoveredStudents.some(
     (h) => h.student.toString() === studentId.toString(),

@@ -1,20 +1,42 @@
 package com.attendiq.app;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
+import android.os.Build;
 import android.os.ParcelUuid;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-@CapacitorPlugin(name = "BleAdvertiser")
+@CapacitorPlugin(
+    name = "BleAdvertiser",
+    permissions = {
+        @Permission(
+            alias = "bluetooth",
+            strings = {
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.BLUETOOTH_CONNECT
+            }
+        ),
+        @Permission(
+            alias = "location",
+            strings = {
+                Manifest.permission.ACCESS_FINE_LOCATION
+            }
+        )
+    }
+)
 public class BleAdvertiserPlugin extends Plugin {
     private BluetoothLeAdvertiser advertiser;
     private AdvertiseCallback callback;
@@ -24,6 +46,25 @@ public class BleAdvertiserPlugin extends Plugin {
 
     @PluginMethod
     public void startAdvertising(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (getPermissionState("bluetooth") != PermissionState.GRANTED) {
+                requestPermissionForAlias("bluetooth", call, "advertisingPermissionCallback");
+                return;
+            }
+        }
+        doStartAdvertising(call);
+    }
+
+    @PermissionCallback
+    private void advertisingPermissionCallback(PluginCall call) {
+        if (getPermissionState("bluetooth") == PermissionState.GRANTED) {
+            doStartAdvertising(call);
+        } else {
+            call.reject("Nearby devices (Bluetooth) permission was denied. Please allow it in App Settings.");
+        }
+    }
+
+    private void doStartAdvertising(PluginCall call) {
         String studentRoll = call.getString("rollNumber", "UNKNOWN");
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
