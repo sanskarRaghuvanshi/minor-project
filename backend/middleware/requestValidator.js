@@ -4,12 +4,46 @@ import compression from 'compression';
 import mongoSanitize from 'mongo-sanitize';
 import express from 'express';
 
-const corsOrigin = process.env.CORS_ORIGIN || '*';
+const MOBILE_ORIGINS = [
+  'http://localhost',
+  'https://localhost',
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://10.0.2.2',
+];
+
+const getCorsOriginCheck = () => {
+  return (origin, callback) => {
+    // Requests with no origin (mobile native apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const corsEnv = process.env.CORS_ORIGIN || '*';
+    if (corsEnv === '*') return callback(null, true);
+
+    const allowed = corsEnv.split(',').map((o) => o.trim());
+
+    if (
+      allowed.includes(origin) ||
+      allowed.includes('*') ||
+      MOBILE_ORIGINS.includes(origin) ||
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('https://localhost:') ||
+      origin.startsWith('capacitor://')
+    ) {
+      return callback(null, true);
+    }
+
+    // Default allow to ensure mobile apps are never blocked
+    return callback(null, true);
+  };
+};
 
 export const securityMiddlewares = [
-  helmet(),
+  helmet({
+    crossOriginResourcePolicy: false,
+  }),
   cors({
-    origin: corsOrigin === '*' ? true : corsOrigin.split(',').map((o) => o.trim()),
+    origin: getCorsOriginCheck(),
     credentials: true,
   }),
   compression(),

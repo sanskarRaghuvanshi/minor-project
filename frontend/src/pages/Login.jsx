@@ -39,7 +39,11 @@ const Login = () => {
       navigate(from === '/' || from === '/login' || from === '/register' ? dest : from, { replace: true });
     } catch (err) {
       const errorCode = err.response?.data?.errorCode;
-      const message = err.response?.data?.message || 'Login failed. Please try again.';
+      const message =
+        err.response?.data?.message ||
+        (err.message === 'Network Error'
+          ? 'Cannot connect to server. Please check your internet connection or verify server status.'
+          : err.message || 'Login failed. Please try again.');
       setErrorObj({ message, errorCode });
     } finally {
       setLoading(false);
