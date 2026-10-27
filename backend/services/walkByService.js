@@ -239,9 +239,9 @@ export const hoverMarkStudent = async ({
 }) => {
   // Proximity measurement is strictly required and cannot be invented (Issue 1 & 6)
   const measuredDist = Number(proximityMeters);
-  if (isNaN(measuredDist) || measuredDist <= 0 || measuredDist > 2.0) {
+  if (isNaN(measuredDist) || measuredDist <= 0 || measuredDist > 1.5) {
     throw new ApiError(
-      `Cannot mark attendance: Proximity must be a valid measured BLE distance <= 2.0m (received: ${proximityMeters})`,
+      `Cannot mark attendance: Proximity must be a valid measured BLE distance <= 1.5m (received: ${proximityMeters})`,
       400,
       'INVALID_PROXIMITY'
     );

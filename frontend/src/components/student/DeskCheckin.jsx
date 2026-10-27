@@ -201,7 +201,7 @@ const DeskCheckin = () => {
             background: 'rgba(255,255,255,0.2)', fontSize: '12px', fontWeight: 700,
             letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '8px'
           }}>
-            Proximity Verified (&lt; 2m Desk Range)
+            Proximity Verified (&lt; 1.5m Desk Range)
           </div>
 
           <h2 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 6px' }}>
@@ -287,7 +287,7 @@ const DeskCheckin = () => {
             color: '#0284C7', fontSize: '13px', fontWeight: 600, border: '1px solid #BAE6FD'
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>desk</span>
-            Desk beacon active • Waiting for teacher to walk past your desk (&lt; 2m)
+            Desk beacon active • Waiting for teacher to walk past your desk (&lt; 1.5m)
           </div>
         </div>
       ) : (
@@ -346,7 +346,7 @@ const DeskCheckin = () => {
           <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>lightbulb</span>
         </div>
         <div style={{ fontSize: '12px', color: '#475569', lineHeight: 1.4 }}>
-          <strong>How Walk-by Proximity Works:</strong> You don&apos;t need to scan any QR code. When you open this screen, your desk beacon turns on. As the teacher walks past your desk within 2 meters, your attendance is verified.
+          <strong>How Walk-by Proximity Works:</strong> You don&apos;t need to scan any QR code. When you open this screen, your desk beacon turns on. As the teacher walks past your desk within 1.5 meters, your attendance is verified.
         </div>
       </div>
     </div>

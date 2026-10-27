@@ -9,7 +9,7 @@ const BleAdvertiser = registerPlugin('BleAdvertiser');
 
 // Physical BLE proximity calibration for mobile smartphones:
 // Phone BLE antennas inside cases typically broadcast between -55 dBm and -82 dBm when nearby
-export const DESK_HOVER_DISTANCE_THRESHOLD = 2.0; // Realistic desk hover range (< 2.0m)
+export const DESK_HOVER_DISTANCE_THRESHOLD = 1.5; // Calibrated desk hover range (< 1.5m)
 
 /**
  * Checks if running natively inside Android container
@@ -419,7 +419,7 @@ export const listenForStudentSignal = async (targetId, timeoutMs = 3500) => {
         resolve({
           success: false,
           error: 'NOT_IN_RANGE',
-          message: `No Bluetooth signal received from ID ${targetId}. Please ensure student's Desk Check-in is open within desk range (< 2m).`,
+          message: `No Bluetooth signal received from ID ${targetId}. Please ensure student's Desk Check-in is open within desk range (< 1.5m).`,
         });
       }
     }, timeoutMs);
