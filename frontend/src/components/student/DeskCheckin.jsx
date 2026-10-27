@@ -62,17 +62,18 @@ const DeskCheckin = () => {
   }, [checkWalkByStatus]);
 
   const [beaconError, setBeaconError] = useState(null);
+  const studentBeaconId = user?.rollNumber || user?.email?.split('@')[0] || user?.id || user?._id || 'STUDENT';
 
   // Turn on Bluetooth BLE Peripheral Advertising on desk
   const activateDeskBeacon = useCallback(async () => {
-    if (!isNative || !user?.rollNumber) return false;
+    if (!isNative || !studentBeaconId) return false;
     setBeaconError(null);
     try {
       await ensureBluetoothEnabled();
-      const started = await startStudentBleBeacon(user.rollNumber);
+      const started = await startStudentBleBeacon(studentBeaconId);
       setBleBroadcasting(!!started);
       if (started) {
-        addToast('BLE Desk Beacon active! Roll broadcasting.', 'success');
+        addToast(`BLE Desk Beacon active! ID: ${studentBeaconId}`, 'success');
       }
       return started;
     } catch (err) {
@@ -83,11 +84,11 @@ const DeskCheckin = () => {
       setBleBroadcasting(false);
       return false;
     }
-  }, [isNative, user?.rollNumber, addToast]);
+  }, [isNative, studentBeaconId, addToast]);
 
   useEffect(() => {
     let mounted = true;
-    if (isNative && user?.rollNumber) {
+    if (isNative && studentBeaconId) {
       activateDeskBeacon().then((started) => {
         if (mounted) setBleBroadcasting(!!started);
       });
@@ -98,7 +99,7 @@ const DeskCheckin = () => {
       stopStudentBleBeacon();
       setBleBroadcasting(false);
     };
-  }, [isNative, user?.rollNumber, activateDeskBeacon]);
+  }, [isNative, studentBeaconId, activateDeskBeacon]);
 
   const hasActive = statusData?.hasActiveSession;
   const isHovered = statusData?.isHovered;
@@ -136,9 +137,9 @@ const DeskCheckin = () => {
             border: '1px solid #BBF7D0', color: '#16A34A', fontSize: '12px', fontWeight: 700
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bluetooth_searching</span>
-            BLE Desk Beacon Active • Roll: {user?.rollNumber}
+            BLE Desk Beacon Active • ID: {studentBeaconId}
           </div>
-        ) : isNative && user?.rollNumber ? (
+        ) : isNative ? (
           <div style={{ marginTop: '12px' }}>
             <button
               type="button"

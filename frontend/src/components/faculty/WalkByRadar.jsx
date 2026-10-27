@@ -206,12 +206,13 @@ const WalkByRadar = () => {
       if (isNative) {
         // STRICT: Must receive genuine Bluetooth signal from student's phone
         await ensureBluetoothEnabled();
+        const targetId = student.studentIdentifier || student.rollNumber || student.email?.split('@')[0] || student._id;
         addToast(`Scanning for ${student.name}'s Bluetooth signal...`, 'info');
-        const sig = await listenForStudentSignal(student.rollNumber, 3500);
+        const sig = await listenForStudentSignal(targetId, 3500);
 
         if (!sig.success || !sig.distance || Number(sig.distance) > 0.5) {
           addToast(
-            sig.message || `No Bluetooth signal detected for ${student.name} (${student.rollNumber}). Device must be physically within < 0.5m!`,
+            sig.message || `No Bluetooth signal detected for ${student.name}. Device must be physically within < 0.5m!`,
             'error'
           );
           return; // STOP! DO NOT MARK!
@@ -249,15 +250,26 @@ const WalkByRadar = () => {
         const currentSession = activeSessionRef.current;
         if (!currentSession || !currentSession.isActive) return;
         const roster = currentSession.roster || [];
-        const matched = roster.find(
-          (s) =>
-            !s.isHovered &&
-            (
-              (dev.studentRoll && s.rollNumber?.toLowerCase() === dev.studentRoll.toLowerCase()) ||
-              (dev.name && s.rollNumber && dev.name.toLowerCase().includes(s.rollNumber.toLowerCase())) ||
-              (dev.name && s.name && dev.name.toLowerCase().includes(s.name.toLowerCase()))
-            )
-        );
+        const matched = roster.find((s) => {
+          if (s.isHovered) return false;
+          const sIds = [
+            s.rollNumber,
+            s.studentIdentifier,
+            s.email?.split('@')[0],
+            s.name,
+            s._id?.toString(),
+            s._id?.toString()?.slice(-6),
+          ].filter(Boolean).map((v) => v.toLowerCase().trim());
+
+          const devRoll = (dev.studentRoll || '').toLowerCase().trim();
+          const devName = (dev.name || '').toLowerCase().trim();
+
+          return sIds.some(
+            (id) =>
+              (devRoll && (devRoll.includes(id) || id.includes(devRoll))) ||
+              (devName && (devName.includes(id) || id.includes(devName)))
+          );
+        });
         if (matched) {
           handleHoverMark(matched._id, matched.name, dev.distance);
         }

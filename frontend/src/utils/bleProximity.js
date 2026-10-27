@@ -102,7 +102,7 @@ export const startStudentBleBeacon = async (rollNumber) => {
   } catch (err) {
     console.warn('Student BLE Beacon advertising failed:', err);
     isBroadcasting = false;
-    return false;
+    throw err;
   }
 };
 
@@ -117,9 +117,29 @@ export const stopStudentBleBeacon = async () => {
 };
 
 /**
- * Decode student roll number from incoming BLE service data
+ * Checks if incoming scan result is from an AttendIQ beacon
  */
-const extractRollFromServiceData = (result) => {
+export const isAttendIqBeacon = (result) => {
+  if (!result) return false;
+  if (result.serviceData) {
+    for (const key of Object.keys(result.serviceData)) {
+      if (key.toLowerCase().includes('ffe0')) return true;
+    }
+  }
+  if (result.services) {
+    for (const s of result.services) {
+      if (s.toLowerCase().includes('ffe0')) return true;
+    }
+  }
+  const name = result.device?.name || result.localName || '';
+  if (name && (name.includes('STUDENT') || name.includes('Desk'))) return true;
+  return false;
+};
+
+/**
+ * Decode student roll number or ID from incoming BLE service data
+ */
+export const extractRollFromServiceData = (result) => {
   if (!result) return null;
 
   if (result.serviceData) {
@@ -172,18 +192,21 @@ export const startBleRadarScan = async ({ onDeviceDetected, onDeviceHovered, onE
 
     isScanning = true;
 
-    // 2. Scan in Low Latency mode for immediate proximity detection
+    // 2. Scan in Low Latency mode for immediate proximity detection (broad scan to prevent dropped packets)
     await BleClient.requestLEScan(
       {
-        services: [ATTENDIQ_SERVICE_UUID],
         scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
         allowDuplicates: true,
       },
       (result) => {
+        const studentRoll = extractRollFromServiceData(result);
+        if (!studentRoll && !isAttendIqBeacon(result)) {
+          return; // Ignore non-attendance BLE devices (headphones, TVs, etc.)
+        }
+
         const rssi = result.rssi;
         const distance = calculateDistanceMeters(rssi);
         const deviceId = result.device?.deviceId || `ble_${Math.random().toString(36).substring(7)}`;
-        const studentRoll = extractRollFromServiceData(result);
         const devName = studentRoll || result.device?.name || result.localName || 'Desk Phone';
 
         const payload = {
@@ -231,8 +254,8 @@ export const stopBleRadarScan = async () => {
  * Listens for up to timeoutMs for the student's BLE packet.
  * STRICT: If no signal is received within 0.5m, it FAILS (NO fake fallbacks!).
  */
-export const listenForStudentSignal = async (targetRoll, timeoutMs = 3500) => {
-  if (!isNativePlatform() || !targetRoll) {
+export const listenForStudentSignal = async (targetId, timeoutMs = 3500) => {
+  if (!isNativePlatform() || !targetId) {
     return {
       success: false,
       error: 'NOT_NATIVE_BLE',
@@ -252,7 +275,7 @@ export const listenForStudentSignal = async (targetRoll, timeoutMs = 3500) => {
 
     return new Promise((resolve) => {
       let resolved = false;
-      const normalizedTarget = targetRoll.toLowerCase().trim();
+      const normalizedTarget = targetId.toLowerCase().trim();
 
       const timer = setTimeout(() => {
         if (!resolved) {
@@ -263,7 +286,7 @@ export const listenForStudentSignal = async (targetRoll, timeoutMs = 3500) => {
           resolve({
             success: false,
             error: 'NOT_IN_RANGE',
-            message: `No Bluetooth signal received from Roll ${targetRoll}. Student device must be physically within < 0.5m!`,
+            message: `No Bluetooth signal received from ID ${targetId}. Student device must be physically within < 0.5m!`,
           });
         }
       }, timeoutMs);
@@ -271,13 +294,15 @@ export const listenForStudentSignal = async (targetRoll, timeoutMs = 3500) => {
       // Start targeted low-latency scan
       BleClient.requestLEScan(
         {
-          services: [ATTENDIQ_SERVICE_UUID],
           scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
           allowDuplicates: true,
         },
         (result) => {
           const roll = extractRollFromServiceData(result);
-          if (roll && roll.toLowerCase().trim() === normalizedTarget) {
+          const devName = result.device?.name || result.localName || '';
+          const matchTarget = (roll || devName || '').toLowerCase().trim();
+
+          if (matchTarget && (matchTarget.includes(normalizedTarget) || normalizedTarget.includes(matchTarget))) {
             const dist = calculateDistanceMeters(result.rssi);
             // STRICT: Must be physically within desk hover threshold (<= 0.5m)
             if (dist <= DESK_HOVER_DISTANCE_THRESHOLD) {

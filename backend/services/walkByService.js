@@ -93,16 +93,20 @@ export const getActiveWalkBySession = async (facultyId) => {
     }
   });
 
-  const roster = allStudents.map((s) => ({
-    _id: s._id,
-    name: s.name,
-    email: s.email,
-    rollNumber: s.rollNumber,
-    isOnline: onlineSet.has(s._id.toString()),
-    isHovered: hoveredMap.has(s._id.toString()),
-    markedAt: hoveredMap.get(s._id.toString())?.markedAt || null,
-    proximityMeters: hoveredMap.get(s._id.toString())?.proximityMeters || null,
-  }));
+  const roster = allStudents.map((s) => {
+    const studentIdentifier = s.rollNumber || s.email?.split('@')[0] || s._id.toString().slice(-6);
+    return {
+      _id: s._id,
+      name: s.name,
+      email: s.email,
+      rollNumber: studentIdentifier,
+      studentIdentifier,
+      isOnline: onlineSet.has(s._id.toString()),
+      isHovered: hoveredMap.has(s._id.toString()),
+      markedAt: hoveredMap.get(s._id.toString())?.markedAt || null,
+      proximityMeters: hoveredMap.get(s._id.toString())?.proximityMeters || null,
+    };
+  });
 
   return {
     ...session,

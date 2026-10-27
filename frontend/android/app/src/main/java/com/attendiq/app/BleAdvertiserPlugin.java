@@ -51,13 +51,25 @@ public class BleAdvertiserPlugin extends Plugin {
                 requestPermissionForAlias("bluetooth", call, "advertisingPermissionCallback");
                 return;
             }
+        } else {
+            if (getPermissionState("location") != PermissionState.GRANTED) {
+                requestPermissionForAlias("location", call, "advertisingPermissionCallback");
+                return;
+            }
         }
         doStartAdvertising(call);
     }
 
     @PermissionCallback
     private void advertisingPermissionCallback(PluginCall call) {
-        if (getPermissionState("bluetooth") == PermissionState.GRANTED) {
+        boolean granted;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            granted = getPermissionState("bluetooth") == PermissionState.GRANTED;
+        } else {
+            granted = getPermissionState("location") == PermissionState.GRANTED;
+        }
+
+        if (granted) {
             doStartAdvertising(call);
         } else {
             call.reject("Nearby devices (Bluetooth) permission was denied. Please allow it in App Settings.");
@@ -65,7 +77,7 @@ public class BleAdvertiserPlugin extends Plugin {
     }
 
     private void doStartAdvertising(PluginCall call) {
-        String studentRoll = call.getString("rollNumber", "UNKNOWN");
+        String studentRoll = call.getString("rollNumber", "STUDENT");
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         if (adapter == null) {
@@ -137,7 +149,7 @@ public class BleAdvertiserPlugin extends Plugin {
         try {
             advertiser.startAdvertising(settings, data, scanResponse, callback);
         } catch (SecurityException se) {
-            call.reject("Missing BLUETOOTH_ADVERTISE permission: " + se.getMessage());
+            call.reject("Missing Bluetooth permission: " + se.getMessage());
         } catch (Exception ex) {
             call.reject("Exception starting BLE advertising: " + ex.getMessage());
         }

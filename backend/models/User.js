@@ -30,6 +30,11 @@ const userSchema = new Schema(
       enum: ['student', 'faculty', 'coordinator', 'admin'],
       required: [true, 'Role is required'],
     },
+    rollNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     branch: { type: String, required: [true, 'Branch is required'] },
     className: { type: String, required: [true, 'Class is required'] },
     section: {
@@ -82,6 +87,7 @@ userSchema.pre('save', async function hashPassword(next) {
     this.passwordChangedAt = Date.now() - 1000;
   }
   next();
+  return undefined;
 });
 
 userSchema.methods.comparePassword = async function compare(candidate) {
