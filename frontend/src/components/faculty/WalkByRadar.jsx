@@ -63,8 +63,20 @@ const WalkByRadar = () => {
   // Session State
   const [activeSession, setActiveSession] = useState(null);
   const activeSessionRef = useRef(activeSession);
+  activeSessionRef.current = activeSession;
+
+  // Track already marked students to prevent duplicate toast bursts and redundant network calls
+  const markedStudentIdsRef = useRef(new Set());
   useEffect(() => {
-    activeSessionRef.current = activeSession;
+    if (activeSession?.roster) {
+      activeSession.roster.forEach((s) => {
+        if (s.isHovered && s._id) {
+          markedStudentIdsRef.current.add(s._id.toString());
+        }
+      });
+    } else if (!activeSession) {
+      markedStudentIdsRef.current.clear();
+    }
   }, [activeSession]);
 
   const [loadingActive, setLoadingActive] = useState(true);
@@ -199,6 +211,21 @@ const WalkByRadar = () => {
       return;
     }
 
+    const sId = studentId.toString();
+
+    // Optimistically mark student as hovered in local state immediately (instant visual feedback)
+    setActiveSession((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        roster: (prev.roster || []).map((s) =>
+          s._id?.toString() === sId
+            ? { ...s, isHovered: true, proximityMeters: Number(measuredDist), hoveredAt: new Date().toISOString() }
+            : s
+        ),
+      };
+    });
+
     try {
       setHoveringId(studentId);
       const proximityMeters = Number(measuredDist);
@@ -220,11 +247,15 @@ const WalkByRadar = () => {
     } catch (err) {
       console.error('Hover mark error:', err);
       const errMsg = err.response?.data?.message || 'Failed to hover mark';
+      // If error was NOT already hovered/marked, allow retry
+      if (!errMsg.toLowerCase().includes('already')) {
+        markedStudentIdsRef.current.delete(sId);
+      }
       addToast(errMsg, 'error');
     } finally {
       setHoveringId(null);
     }
-  }, [isNative, addToast, fetchActiveSession]);
+  }, [addToast, fetchActiveSession]);
 
   // Click on student card "Hover Desk" button
   const triggerHoverForStudent = async (student) => {
@@ -273,7 +304,11 @@ const WalkByRadar = () => {
     const started = await startBleRadarScan({
       onDeviceDetected: (dev) => {
         setRecentBlePings((prev) => {
-          const filtered = prev.filter((d) => d.deviceId !== dev.deviceId);
+          const existing = prev.find((d) => d.deviceId === dev.deviceId || (d.studentRoll && d.studentRoll === dev.studentRoll));
+          if (existing && Date.now() - (existing.timestamp || 0) < 1500 && Math.abs(existing.distance - dev.distance) < 0.2) {
+            return prev;
+          }
+          const filtered = prev.filter((d) => d.deviceId !== dev.deviceId && (!d.studentRoll || d.studentRoll !== dev.studentRoll));
           return [dev, ...filtered].slice(0, 6);
         });
       },
@@ -282,13 +317,14 @@ const WalkByRadar = () => {
         if (!currentSession || !currentSession.isActive) return;
         const roster = currentSession.roster || [];
         const matched = roster.find((s) => {
-          if (s.isHovered) return false;
+          const sId = s._id?.toString();
+          if (s.isHovered || (sId && markedStudentIdsRef.current.has(sId))) return false;
           const sIds = [
             s.rollNumber,
             s.studentIdentifier,
             s.email?.split('@')[0],
-            s._id?.toString(),
-            s._id?.toString()?.slice(-6),
+            sId,
+            sId?.slice(-6),
           ].filter(Boolean).map((v) => v.toLowerCase().trim());
 
           const devRoll = (dev.studentRoll || '').toLowerCase().trim();
@@ -300,6 +336,9 @@ const WalkByRadar = () => {
 
         // Issue 2: Only mark verified matched student (wrong-device fallback completely removed)
         if (matched) {
+          const sId = matched._id.toString();
+          // Lock student immediately so subsequent packets cannot trigger duplicate requests/toasts
+          markedStudentIdsRef.current.add(sId);
           handleHoverMark(matched._id, matched.name, dev.distance);
         }
       },

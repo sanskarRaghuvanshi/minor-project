@@ -273,6 +273,7 @@ export const extractRollFromServiceData = (result) => {
 // Shared state for the continuous BLE scanner (avoids scanner collision)
 let isScanning = false;
 const liveDetectedDevices = new Map();
+const lastHoveredTimestamps = new Map(); // Cooldown per student roll to prevent duplicate event flood
 const deviceListeners = new Set();
 
 export const registerBleDetectionListener = (listener) => {
@@ -347,9 +348,15 @@ export const startBleRadarScan = async ({ onDeviceDetected, onDeviceHovered, onE
 
         onDeviceDetected?.(payload);
 
-        // Auto-hover when physically within <= 0.5m
+        // Auto-hover when physically within <= 1.5m desk threshold
         if (distance <= DESK_HOVER_DISTANCE_THRESHOLD) {
-          onDeviceHovered?.(payload);
+          const now = Date.now();
+          const lastHoverTime = lastHoveredTimestamps.get(rollKey) || 0;
+          // Per-student-device cooldown of 3500ms prevents packet burst spamming
+          if (now - lastHoverTime >= 3500) {
+            lastHoveredTimestamps.set(rollKey, now);
+            onDeviceHovered?.(payload);
+          }
         }
       },
     );
@@ -370,6 +377,7 @@ export const stopBleRadarScan = async () => {
       await BleClient.stopLEScan();
       isScanning = false;
       liveDetectedDevices.clear();
+      lastHoveredTimestamps.clear();
     }
   } catch (err) {
     console.warn('Error stopping BLE scan:', err);

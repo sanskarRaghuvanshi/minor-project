@@ -278,26 +278,23 @@ export const hoverMarkStudent = async ({
     );
   }
 
-  // Check if student already hovered in this session
-  const alreadyHovered = session.hoveredStudents.some(
-    (h) => h.student.toString() === studentId.toString(),
-  );
-
-  if (!alreadyHovered) {
-    // Atomic push to prevent VersionError (Issue 7)
-    await WalkBySession.updateOne(
-      { _id: session._id },
-      {
-        $push: {
-          hoveredStudents: {
-            student: studentId,
-            markedAt: new Date(),
-            proximityMeters: measuredDist,
-          },
+  // Atomic push if not already in array (prevents duplicate writes under concurrency)
+  const updateResult = await WalkBySession.updateOne(
+    { _id: session._id, 'hoveredStudents.student': { $ne: studentId } },
+    {
+      $push: {
+        hoveredStudents: {
+          student: studentId,
+          markedAt: new Date(),
+          proximityMeters: measuredDist,
         },
       },
-    );
+    },
+  );
 
+  const newlyAdded = updateResult.modifiedCount > 0;
+
+  if (newlyAdded) {
     // Record attendance as present with source 'walkby'
     const { results, errors } = await bulkUpsertAttendance({
       records: [{ studentId, status: 'present' }],
