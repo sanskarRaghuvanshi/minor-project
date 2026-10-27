@@ -17,7 +17,9 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
 
   // GPS Geolocation state for classroom verification
   const [coords, setCoords] = useState(null);
-  const [gpsStatus, setGpsStatus] = useState('prompt'); // 'prompt' | 'locating' | 'ready' | 'denied'
+  const [gpsStatus, setGpsStatus] = useState('prompt');
+  const [bleSimMode, setBleSimMode] = useState('inside'); // 'inside' (-64 dBm) | 'hallway' (-89 dBm) | 'disabled'
+  const [detectedBleSession, setDetectedBleSession] = useState(null); // 'prompt' | 'locating' | 'ready' | 'denied'
   const coordsRef = useRef(null);
 
   const isMountedRef = useRef(true);
@@ -104,10 +106,12 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
 
       try {
         let sessionToken = decodedText;
+        let qrPayloadObj = null;
         if (typeof decodedText === 'string' && (decodedText.startsWith('{') || decodedText.includes('sessionToken'))) {
           try {
             const parsed = JSON.parse(decodedText);
             sessionToken = parsed.sessionToken || decodedText;
+            qrPayloadObj = parsed;
           } catch (e) {}
         }
 
@@ -125,6 +129,28 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         }
 
         const payload = { sessionToken };
+        
+        // Attach Bluetooth proximity proof if QR session requires Bluetooth
+        if (qrPayloadObj?.bluetoothEnabled) {
+          setDetectedBleSession(qrPayloadObj);
+          if (bleSimMode === 'disabled') {
+            payload.bluetoothProof = null; // simulate bluetooth OFF
+          } else {
+            const threshold = Number(qrPayloadObj.bluetoothRssiThreshold) || -75;
+            // When simulating in-room, send a strong signal above the required threshold (e.g. threshold + 12 dBm, max -45 dBm)
+            // When simulating hallway/out-of-range, send a weak signal below threshold (e.g. threshold - 15 dBm)
+            const simulatedRssi = bleSimMode === 'hallway' 
+              ? Math.min(threshold - 15, -89)
+              : Math.max(threshold + 12, -48);
+
+            payload.bluetoothProof = {
+              verified: true,
+              beaconId: qrPayloadObj.bluetoothBeaconId,
+              rssi: simulatedRssi,
+              range: qrPayloadObj.bluetoothRange || 'standard',
+            };
+          }
+        }
         if (activeCoords?.lat != null && activeCoords?.lng != null) {
           payload.lat = activeCoords.lat;
           payload.lng = activeCoords.lng;
@@ -142,7 +168,11 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
             'success',
           );
         } else {
-          addToast('Attendance marked successfully!', 'success');
+          const parts = [];
+          if (data.data?.distance != null) parts.push(`${data.data.distance}m GPS`);
+          if (data.data?.bluetoothRssi != null) parts.push(`BLE: ${data.data.bluetoothRssi} dBm`);
+          const detail = parts.length ? ` (${parts.join(' • ')})` : '';
+          addToast(`Attendance marked successfully!${detail}`, 'success');
         }
 
         if (onScanSuccess) {
@@ -152,7 +182,13 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
         let errorMessage = 'Failed to mark attendance';
         const errorCode = err.response?.data?.errorCode;
 
-        if (errorCode === 'GEOFENCE_VIOLATION') {
+        if (errorCode === 'BLUETOOTH_REQUIRED') {
+          errorMessage = 'Bluetooth proximity check is required by faculty. Please turn ON Bluetooth on your device.';
+        } else if (errorCode === 'BLUETOOTH_OUT_OF_RANGE') {
+          errorMessage = err.response?.data?.message || 'Bluetooth range check failed: Device is outside the classroom boundary.';
+        } else if (errorCode === 'BLUETOOTH_MISMATCH') {
+          errorMessage = 'Bluetooth beacon mismatch: Classroom beacon was not detected.';
+        } else if (errorCode === 'GEOFENCE_VIOLATION') {
           errorMessage =
             err.response?.data?.message ||
             'Geo-fence check failed: You are outside the classroom radius (50m).';
@@ -510,6 +546,110 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
           <span>GPS Active • Classroom Check Ready (±{coords?.accuracy || 0}m)</span>
         </div>
       )}
+
+      
+      {/* Bluetooth Proximity Status & Test Mode Selector */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px',
+          width: '100%',
+          maxWidth: '340px',
+          margin: '0 auto 12px',
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 12px',
+            borderRadius: '100px',
+            fontSize: '11px',
+            fontWeight: 700,
+            background: bleSimMode === 'inside' ? '#EEF2FF' : bleSimMode === 'hallway' ? '#FEF3C7' : '#F1F5F9',
+            color: bleSimMode === 'inside' ? '#4338CA' : bleSimMode === 'hallway' ? '#D97706' : '#64748B',
+            border: `1px solid ${bleSimMode === 'inside' ? '#C7D2FE' : bleSimMode === 'hallway' ? '#FDE68A' : '#E2E8F0'}`,
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+            {bleSimMode === 'disabled' ? 'bluetooth_disabled' : 'bluetooth'}
+          </span>
+          <span>
+            {bleSimMode === 'inside'
+              ? 'BLE Active • Inside Classroom (Signal In Range ✓)'
+              : bleSimMode === 'hallway'
+              ? 'BLE Weak • Hallway / Out of Range (-89 dBm ⚠️)'
+              : 'Bluetooth OFF (Simulated)'}
+          </span>
+        </div>
+
+        {/* Proximity Test Mode Switcher */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: '#F8FAFC',
+            padding: '4px 6px',
+            borderRadius: '10px',
+            border: '1px solid #E2E8F0',
+            fontSize: '10.5px',
+          }}
+        >
+          <span style={{ fontWeight: 700, color: '#475569', paddingLeft: '4px' }}>Simulate:</span>
+          <button
+            type="button"
+            onClick={() => setBleSimMode('inside')}
+            style={{
+              padding: '3px 8px',
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '10.5px',
+              background: bleSimMode === 'inside' ? '#4338CA' : 'transparent',
+              color: bleSimMode === 'inside' ? '#fff' : '#64748B',
+            }}
+          >
+            In Room (Valid ✓)
+          </button>
+          <button
+            type="button"
+            onClick={() => setBleSimMode('hallway')}
+            style={{
+              padding: '3px 8px',
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '10.5px',
+              background: bleSimMode === 'hallway' ? '#D97706' : 'transparent',
+              color: bleSimMode === 'hallway' ? '#fff' : '#64748B',
+            }}
+          >
+            Outside Hallway (⚠️)
+          </button>
+          <button
+            type="button"
+            onClick={() => setBleSimMode('disabled')}
+            style={{
+              padding: '3px 8px',
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '10.5px',
+              background: bleSimMode === 'disabled' ? '#DC2626' : 'transparent',
+              color: bleSimMode === 'disabled' ? '#fff' : '#64748B',
+            }}
+          >
+            BLE Off
+          </button>
+        </div>
+      </div>
 
       {/* Viewfinder Frame Container */}
       <div
