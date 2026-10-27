@@ -7,10 +7,9 @@ export const ATTENDIQ_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
 // Register native Android BLE Peripheral Advertiser plugin
 const BleAdvertiser = registerPlugin('BleAdvertiser');
 
-// Log-distance path loss constants for indoor 2.4 GHz BLE
-const DEFAULT_MEASURED_POWER = -59; // RSSI expected at exactly 1 meter (dBm)
-const PATH_LOSS_EXPONENT = 2.4; // Indoor classroom environment path-loss factor
-export const DESK_HOVER_DISTANCE_THRESHOLD = 0.5; // Max meters for auto hover mark
+// Physical BLE proximity calibration for mobile smartphones:
+// Phone BLE antennas inside cases typically broadcast between -55 dBm and -82 dBm when nearby
+export const DESK_HOVER_DISTANCE_THRESHOLD = 2.0; // Realistic desk hover range (< 2.0m)
 
 /**
  * Checks if running natively inside Android container
@@ -18,12 +17,21 @@ export const DESK_HOVER_DISTANCE_THRESHOLD = 0.5; // Max meters for auto hover m
 export const isNativePlatform = () => Capacitor.isNativePlatform();
 
 /**
- * Calculates approximate physical distance in meters using Log-Distance Path Loss:
- * Distance = 10 ^ ((Measured Power - RSSI) / (10 * N))
+ * Calculates physical distance in meters using calibrated RSSI ranges for smartphones:
+ * Distance < 0.5m is immediate adjacent proximity.
+ * Distance <= 2.0m represents classroom desk proximity.
  */
-export const calculateDistanceMeters = (rssi, txPower = DEFAULT_MEASURED_POWER) => {
+export const calculateDistanceMeters = (rssi, txPower = -65) => {
   if (!rssi || rssi === 0) return 999.0;
-  const ratio = (txPower - rssi) / (10 * PATH_LOSS_EXPONENT);
+  // Realistic physical lookup for phone-to-phone BLE propagation indoors
+  if (rssi >= -65) return 0.3; // Adjacent / touching
+  if (rssi >= -72) return 0.6; // Same desk
+  if (rssi >= -78) return 1.1; // Walking past desk aisle
+  if (rssi >= -82) return 1.6; // In desk range
+  if (rssi >= -86) return 2.2; // Next desk over
+
+  // Log-distance formula fallback for weaker signals
+  const ratio = (txPower - rssi) / (10 * 2.2);
   const distance = Math.pow(10, ratio);
   return Number(distance.toFixed(2));
 };
@@ -77,6 +85,16 @@ export const ensureBluetoothEnabled = async () => {
         isEnabled = await BleClient.isEnabled();
       } catch (e) {}
     }
+
+    // On Android, BLE discovery requires Location (GPS) to be active
+    try {
+      const loc = await BleClient.isLocationEnabled();
+      if (loc && loc.value === false) {
+        console.warn('Location is off - attempting to open location settings');
+        await BleClient.openLocationSettings();
+      }
+    } catch (locErr) {}
+
     return isEnabled;
   } catch (err) {
     console.warn('ensureBluetoothEnabled error:', err);
@@ -389,7 +407,7 @@ export const listenForStudentSignal = async (targetId, timeoutMs = 3500) => {
         resolve({
           success: false,
           error: 'NOT_IN_RANGE',
-          message: `No Bluetooth signal received from ID ${targetId}. Student device must be physically within < 0.5m!`,
+          message: `No Bluetooth signal received from ID ${targetId}. Please ensure student's Desk Check-in is open within desk range (< 2m).`,
         });
       }
     }, timeoutMs);

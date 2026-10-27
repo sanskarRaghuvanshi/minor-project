@@ -194,8 +194,8 @@ const WalkByRadar = () => {
     const currentSession = activeSessionRef.current;
     if (!currentSession?.sessionToken) return;
 
-    if (isNative && (!measuredDist || Number(measuredDist) > 0.5)) {
-      addToast('Rejected: Proximity must be within 0.5m desk hover range.', 'error');
+    if (isNative && (!measuredDist || Number(measuredDist) > 2.0)) {
+      addToast('Rejected: Proximity must be within desk hover range (< 2.0m).', 'error');
       return;
     }
 
@@ -242,9 +242,9 @@ const WalkByRadar = () => {
         addToast(`Scanning for ${student.name}'s Bluetooth signal...`, 'info');
         const sig = await listenForStudentSignal(targetId, 3500);
 
-        if (!sig.success || !sig.distance || Number(sig.distance) > 0.5) {
+        if (!sig.success || !sig.distance || Number(sig.distance) > 2.0) {
           addToast(
-            sig.message || `No Bluetooth signal detected for ${student.name}. Device must be physically within < 0.5m!`,
+            sig.message || `No Bluetooth signal detected for ${student.name}. Device must be physically within desk range (< 2m)!`,
             'error'
           );
           return; // STOP! DO NOT MARK!
@@ -304,6 +304,12 @@ const WalkByRadar = () => {
         });
         if (matched) {
           handleHoverMark(matched._id, matched.name, dev.distance);
+        } else if (dev.distance <= 1.8) {
+          // If 1 student is logged in online at desk and signal is detected within 1.8m
+          const onlineUnhovered = roster.filter((s) => !s.isHovered && s.isOnline);
+          if (onlineUnhovered.length === 1) {
+            handleHoverMark(onlineUnhovered[0]._id, onlineUnhovered[0].name, dev.distance);
+          }
         }
       },
       onError: (err) => {
@@ -424,7 +430,7 @@ const WalkByRadar = () => {
                 background: '#ECFDF5', color: '#059669',
                 fontSize: '11px', fontWeight: 700, border: '1px solid #A7F3D0'
               }}>
-                PROXIMITY &lt; 0.5m
+                DESK PROXIMITY &lt; 2m
               </span>
               <span style={{
                 padding: '3px 10px', borderRadius: '20px',
@@ -804,7 +810,7 @@ const WalkByRadar = () => {
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                     {bleScannerActive ? 'bluetooth_searching' : 'bluetooth'}
                   </span>
-                  {bleScannerActive ? '📡 BLE Listening (<0.5m)' : 'Turn On Bluetooth & Listen'}
+                  {bleScannerActive ? '📡 BLE Listening (<2m)' : 'Turn On Bluetooth & Listen'}
                 </button>
               )}
 
@@ -852,7 +858,7 @@ const WalkByRadar = () => {
               </div>
               <div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  Auto Walk-by Radar: {bleScannerActive ? 'ACTIVE (< 0.5m)' : 'STANDBY'}
+                  Auto Walk-by Radar: {bleScannerActive ? 'ACTIVE (< 2m)' : 'STANDBY'}
                   <span style={{
                     padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
                     background: bleScannerActive ? '#DCFCE7' : '#DBEAFE',
@@ -862,7 +868,7 @@ const WalkByRadar = () => {
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                  Walk past desks holding your phone. Any student within 0.5m is automatically detected and marked present! No tapping required.
+                  Walk past desks holding your phone. Any student within desk range (&lt; 2m) is automatically detected and marked present! No tapping required.
                 </div>
               </div>
             </div>
@@ -892,7 +898,7 @@ const WalkByRadar = () => {
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                     {bleScannerActive ? 'check_circle' : 'play_arrow'}
                   </span>
-                  {bleScannerActive ? '⚡ Auto-Detecting (<0.5m)' : '⚡ Turn On Auto-Walk Radar'}
+                  {bleScannerActive ? '⚡ Auto-Detecting (<2m)' : '⚡ Turn On Auto-Walk Radar'}
                 </button>
               ) : (
                 <button
@@ -932,7 +938,7 @@ const WalkByRadar = () => {
             <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '14px', border: '1px solid #BBF7D0', boxShadow: '0 2px 6px rgba(16,185,129,0.08)' }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: '#059669' }}>Hovered / Present</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: '#059669', marginTop: '4px' }}>{hoveredCount}</div>
-              <div style={{ fontSize: '11px', color: '#10B981', marginTop: '2px' }}>&lt; 0.5m desk verified</div>
+              <div style={{ fontSize: '11px', color: '#10B981', marginTop: '2px' }}>&lt; 2m desk verified</div>
             </div>
 
             <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
@@ -960,7 +966,7 @@ const WalkByRadar = () => {
                     background: bleScannerActive ? '#10B981' : '#64748B',
                     boxShadow: bleScannerActive ? '0 0 8px #10B981' : 'none'
                   }} />
-                  {bleScannerActive ? 'BLE Active (<0.5m)' : 'Range: 0.5m'}
+                  {bleScannerActive ? 'BLE Active (<2m)' : 'Range: 2m'}
                 </span>
               </div>
 
@@ -1030,7 +1036,7 @@ const WalkByRadar = () => {
               </div>
 
               <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '12px' }}>
-                Center blip: Teacher Scanner • Green: Verified (&lt; 0.5m) • Blue: Online Desk
+                Center blip: Teacher Scanner • Green: Verified (&lt; 2m) • Blue: Online Desk
               </div>
 
               {/* Recent BLE hardware signals if any */}
