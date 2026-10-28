@@ -292,7 +292,7 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
 
       let message = 'Failed to access camera';
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        message = 'Camera access denied. Click the 🔒 lock icon in the address bar → Allow camera → Refresh.';
+        message = 'Camera permission was denied. Tap "Grant Camera Permission" below or enable Camera for AttendIQ in device Settings.';
         setPermissionState('denied');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         message = 'No camera found on this device.';
@@ -659,9 +659,9 @@ const QrScanner = ({ onScanSuccess, onScanError, onClose }) => {
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-              refresh
+              photo_camera
             </span>
-            Try Again
+            Grant Camera Permission
           </button>
         </div>
       )}

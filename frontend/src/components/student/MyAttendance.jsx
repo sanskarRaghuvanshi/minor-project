@@ -112,7 +112,7 @@ const MyAttendance = () => {
 
       {/* Filter Control Bar */}
       <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid rgba(226,232,240,0.8)', marginBottom: '20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+        <div className="my-att-filter-grid">
           
           {/* Subject Filter */}
           <div style={{ background: '#F8FAFC', borderRadius: '14px', padding: '10px 14px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '10px' }}>

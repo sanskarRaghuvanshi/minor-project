@@ -234,7 +234,7 @@ const MarkAttendance = () => {
         </div>
 
         {/* Realtime Stats Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#fff', padding: '6px 8px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid #E2E8F0' }}>
+        <div className="mark-att-stats-bar" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#fff', padding: '6px 8px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid #E2E8F0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', borderRadius: '12px', background: '#F1F5F9' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563EB' }} />
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
@@ -289,7 +289,7 @@ const MarkAttendance = () => {
 
       {/* Session Configuration Card */}
       <div style={{ background: '#fff', borderRadius: '20px', padding: '20px', boxShadow: '0 1px 3px rgba(15,23,42,0.04)', border: '1px solid rgba(226,232,240,0.8)', marginBottom: '20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+        <div className="mark-att-config-grid">
 
           {/* Date Picker */}
           <div style={{ background: '#F8FAFC', borderRadius: '14px', padding: '10px 14px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -307,7 +307,7 @@ const MarkAttendance = () => {
           </div>
 
           {/* Multi-Select Time Slot / Period Picker */}
-          <div style={{ gridColumn: 'span 2', background: '#F8FAFC', borderRadius: '14px', padding: '12px 14px', border: '1px solid #E2E8F0' }}>
+          <div className="mark-att-period-picker" style={{ background: '#F8FAFC', borderRadius: '14px', padding: '12px 14px', border: '1px solid #E2E8F0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <label style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="material-symbols-outlined" style={{ color: '#2563EB', fontSize: '16px' }}>schedule</span>

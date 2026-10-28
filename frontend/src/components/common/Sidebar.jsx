@@ -73,20 +73,31 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile Toggle Button (only when closed) */}
-      {!isOpen && (
+      {/* Mobile Top App Bar (shown only on mobile <= 768px) */}
+      <header className="mobile-topbar">
         <button
-          className="sidebar-toggle"
+          className="mobile-topbar__btn"
           onClick={() => setIsOpen(true)}
           aria-label="Open sidebar"
-          aria-expanded={false}
           type="button"
         >
-          <span className="material-symbols-outlined" style={{ color: '#1E293B', fontSize: '22px' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#1E293B' }}>
             menu
           </span>
         </button>
-      )}
+
+        <div className="mobile-topbar__brand">
+          <div className="mobile-topbar__logo">
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>school</span>
+          </div>
+          <span className="mobile-topbar__title">AttendIQ</span>
+          <span className="mobile-topbar__badge">LIVE</span>
+        </div>
+
+        <div className="mobile-topbar__avatar" title={user?.name || ''}>
+          {initials}
+        </div>
+      </header>
 
       <aside
         className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}
