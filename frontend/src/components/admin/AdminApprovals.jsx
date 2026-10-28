@@ -140,7 +140,7 @@ const AdminApprovals = () => {
   };
 
   return (
-    <div style={{ padding: '24px 0', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '12px 0 32px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header Deck */}
       <div
         style={{
@@ -388,8 +388,8 @@ const AdminApprovals = () => {
             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
           }}
         >
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <div className="table-container">
+            <table style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   <th style={{ padding: '16px 20px', width: '40px' }}>

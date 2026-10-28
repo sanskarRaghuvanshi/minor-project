@@ -89,6 +89,21 @@ const WalkByRadar = () => {
   const [bleScannerActive, setBleScannerActive] = useState(false);
   const [hoverScannerActive, setHoverScannerActive] = useState(true);
   const [recentBlePings, setRecentBlePings] = useState([]);
+  const [hoverRangeThreshold, setHoverRangeThreshold] = useState(() => {
+    try {
+      const saved = localStorage.getItem('attendIq_hoverRangeThreshold');
+      return saved ? Math.min(1.5, Math.max(0.5, parseFloat(saved))) : 1.5;
+    } catch (e) {
+      return 1.5;
+    }
+  });
+  const hoverRangeThresholdRef = useRef(hoverRangeThreshold);
+  useEffect(() => {
+    hoverRangeThresholdRef.current = hoverRangeThreshold;
+    try {
+      localStorage.setItem('attendIq_hoverRangeThreshold', String(hoverRangeThreshold));
+    } catch (e) {}
+  }, [hoverRangeThreshold]);
 
   // Poll active session
   const pollIntervalRef = useRef(null);
@@ -206,8 +221,9 @@ const WalkByRadar = () => {
     const currentSession = activeSessionRef.current;
     if (!currentSession?.sessionToken) return;
 
-    if (!measuredDist || Number(measuredDist) <= 0 || Number(measuredDist) > 1.5) {
-      addToast('Cannot mark: Valid measured Bluetooth proximity (< 1.5m) required.', 'error');
+    const threshold = hoverRangeThresholdRef.current || 1.5;
+    if (!measuredDist || Number(measuredDist) <= 0 || Number(measuredDist) > threshold) {
+      addToast(`Cannot mark: Distance (${measuredDist}m) exceeds selected range (<= ${threshold}m).`, 'error');
       return;
     }
 
@@ -271,11 +287,12 @@ const WalkByRadar = () => {
         await ensureBluetoothEnabled();
         const targetId = student.studentIdentifier || student.rollNumber || student.email?.split('@')[0] || student._id;
         addToast(`Scanning for ${student.name}'s Bluetooth signal...`, 'info');
-        const sig = await listenForStudentSignal(targetId, 3500);
+        const threshold = hoverRangeThresholdRef.current || 1.5;
+        const sig = await listenForStudentSignal(targetId, 3500, threshold);
 
-        if (!sig.success || !sig.distance || Number(sig.distance) > 1.5) {
+        if (!sig.success || !sig.distance || Number(sig.distance) > threshold) {
           addToast(
-            sig.message || `No Bluetooth signal detected for ${student.name}. Device must be physically within desk range (< 1.5m)!`,
+            sig.message || `No Bluetooth signal detected for ${student.name}. Device must be physically within selected range (< ${threshold}m)!`,
             'error'
           );
           return; // STOP! DO NOT MARK!
@@ -302,6 +319,7 @@ const WalkByRadar = () => {
       return;
     }
     const started = await startBleRadarScan({
+      getThreshold: () => hoverRangeThresholdRef.current,
       onDeviceDetected: (dev) => {
         setRecentBlePings((prev) => {
           const existing = prev.find((d) => d.deviceId === dev.deviceId || (d.studentRoll && d.studentRoll === dev.studentRoll));
@@ -313,6 +331,7 @@ const WalkByRadar = () => {
         });
       },
       onDeviceHovered: (dev) => {
+        if (dev.distance > hoverRangeThresholdRef.current) return;
         const currentSession = activeSessionRef.current;
         if (!currentSession || !currentSession.isActive) return;
         const roster = currentSession.roster || [];
@@ -818,7 +837,7 @@ const WalkByRadar = () => {
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                     {bleScannerActive ? 'bluetooth_searching' : 'bluetooth'}
                   </span>
-                  {bleScannerActive ? '📡 BLE Listening (<1.5m)' : 'Turn On Bluetooth & Listen'}
+                  {bleScannerActive ? `📡 BLE Listening (<${hoverRangeThreshold}m)` : 'Turn On Bluetooth & Listen'}
                 </button>
               )}
 
@@ -844,6 +863,97 @@ const WalkByRadar = () => {
             </div>
           </div>
 
+          
+          {/* Teacher Bluetooth Range Selector Card (0.5m - 1.5m) */}
+          <div style={{
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            marginBottom: '20px',
+            boxShadow: '0 1px 3px rgba(15,23,42,0.03)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  background: '#EFF6FF', color: '#2563EB',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>tune</span>
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                    Bluetooth Radar Sensitivity
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748B' }}>
+                    Adjust desk hover proximity (0.5m to 1.5m)
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '4px 12px', borderRadius: '100px',
+                background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0',
+                fontSize: '12px', fontWeight: 800
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>sensors</span>
+                Selected Range: &le; {hoverRangeThreshold}m
+              </div>
+            </div>
+
+            {/* Slider & Quick-Select Pills */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', minWidth: '35px' }}>0.5m</span>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1.5"
+                  step="0.1"
+                  value={hoverRangeThreshold}
+                  onChange={(e) => setHoverRangeThreshold(Number(e.target.value))}
+                  style={{
+                    flex: 1,
+                    accentColor: '#2563EB',
+                    cursor: 'pointer',
+                    height: '6px'
+                  }}
+                />
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', minWidth: '35px', textAlign: 'right' }}>1.5m</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {[0.5, 0.8, 1.0, 1.2, 1.5].map((val) => {
+                  const isSelected = hoverRangeThreshold === val;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setHoverRangeThreshold(val)}
+                      style={{
+                        flex: '1 1 auto',
+                        minWidth: '60px',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: isSelected ? 800 : 600,
+                        border: isSelected ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
+                        background: isSelected ? '#EFF6FF' : '#F8FAFC',
+                        color: isSelected ? '#1D4ED8' : '#475569',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {val === 0.5 ? '0.5m (Close)' : val === 1.0 ? '1.0m (Desk)' : val === 1.5 ? '1.5m (Max)' : val + 'm'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           {/* Auto Walk-by Mode Action Card */}
           <div style={{
             background: bleScannerActive ? '#F0FDF4' : '#EFF6FF',
@@ -866,7 +976,7 @@ const WalkByRadar = () => {
               </div>
               <div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  Auto Walk-by Radar: {bleScannerActive ? 'ACTIVE (< 1.5m)' : 'STANDBY'}
+                  Auto Walk-by Radar: {bleScannerActive ? `ACTIVE (< ${hoverRangeThreshold}m)` : 'STANDBY'}
                   <span style={{
                     padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
                     background: bleScannerActive ? '#DCFCE7' : '#DBEAFE',
@@ -876,7 +986,7 @@ const WalkByRadar = () => {
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                  Walk past desks holding your phone. Any student within desk range (&lt; 1.5m) is automatically detected and marked present! No tapping required.
+                  Walk past desks holding your phone. Any student within selected desk range (&lt; {hoverRangeThreshold}m) is automatically detected and marked present! No tapping required.
                 </div>
               </div>
             </div>
@@ -906,7 +1016,7 @@ const WalkByRadar = () => {
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                     {bleScannerActive ? 'check_circle' : 'play_arrow'}
                   </span>
-                  {bleScannerActive ? '⚡ Auto-Detecting (<1.5m)' : '⚡ Turn On Auto-Walk Radar'}
+                  {bleScannerActive ? `⚡ Auto-Detecting (<${hoverRangeThreshold}m)` : '⚡ Turn On Auto-Walk Radar'}
                 </button>
               ) : (
                 <button
@@ -974,7 +1084,7 @@ const WalkByRadar = () => {
                     background: bleScannerActive ? '#10B981' : '#64748B',
                     boxShadow: bleScannerActive ? '0 0 8px #10B981' : 'none'
                   }} />
-                  {bleScannerActive ? 'BLE Active (<1.5m)' : 'Range: 1.5m'}
+                  {bleScannerActive ? `BLE Active (<${hoverRangeThreshold}m)` : `Range: ${hoverRangeThreshold}m`}
                 </span>
               </div>
 

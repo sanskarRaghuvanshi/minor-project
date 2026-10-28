@@ -27,7 +27,7 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 0' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '12px 0 32px' }}>
         <Skeleton variant="card" height="120px" />
         <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -49,7 +49,7 @@ const AdminDashboard = () => {
         style={{
           background: '#FFFFFF',
           borderRadius: '24px',
-          padding: '24px 28px',
+          padding: '20px 22px',
           border: '1px solid rgba(226,232,240,0.8)',
           boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
           marginBottom: '24px',
@@ -202,7 +202,7 @@ const AdminDashboard = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '16px',
           marginBottom: '28px',
         }}

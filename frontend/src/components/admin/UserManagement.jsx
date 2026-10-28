@@ -79,7 +79,7 @@ const UserManagement = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 0' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '12px 0 32px' }}>
       {/* Header Deck */}
       <div
         style={{
@@ -318,8 +318,8 @@ const UserManagement = () => {
             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
           }}
         >
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <div className="table-container">
+            <table style={{ width: '100%', minWidth: '680px', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   <th style={{ padding: '16px 20px' }}>User Details</th>

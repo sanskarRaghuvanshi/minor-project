@@ -295,7 +295,7 @@ export const getLiveDetectedDevice = (id) => {
  * Teacher Phone BLE Central Scanner:
  * Single continuous low-latency LE scanner that powers both auto-walk & targeted hover.
  */
-export const startBleRadarScan = async ({ onDeviceDetected, onDeviceHovered, onError }) => {
+export const startBleRadarScan = async ({ onDeviceDetected, onDeviceHovered, onError, getThreshold }) => {
   if (!isNativePlatform()) return false;
 
   try {
@@ -348,8 +348,9 @@ export const startBleRadarScan = async ({ onDeviceDetected, onDeviceHovered, onE
 
         onDeviceDetected?.(payload);
 
-        // Auto-hover when physically within <= 1.5m desk threshold
-        if (distance <= DESK_HOVER_DISTANCE_THRESHOLD) {
+        // Auto-hover when physically within teacher-selected desk threshold (0.5m - 1.5m)
+        const currentThreshold = typeof getThreshold === 'function' ? getThreshold() : DESK_HOVER_DISTANCE_THRESHOLD;
+        if (distance <= currentThreshold) {
           const now = Date.now();
           const lastHoverTime = lastHoveredTimestamps.get(rollKey) || 0;
           // Per-student-device cooldown of 3500ms prevents packet burst spamming
@@ -389,7 +390,7 @@ export const stopBleRadarScan = async () => {
  * Targeted Proximity Listen for a specific Student:
  * Uses the live stream from the continuous scanner without starting a second competing scan.
  */
-export const listenForStudentSignal = async (targetId, timeoutMs = 3500) => {
+export const listenForStudentSignal = async (targetId, timeoutMs = 3500, maxDistance = DESK_HOVER_DISTANCE_THRESHOLD) => {
   if (!isNativePlatform() || !targetId) {
     return {
       success: false,
@@ -402,7 +403,7 @@ export const listenForStudentSignal = async (targetId, timeoutMs = 3500) => {
 
   // 1. Check if the continuous scanner already detected this student within the last 4 seconds
   const existing = getLiveDetectedDevice(normalized);
-  if (existing && existing.distance <= DESK_HOVER_DISTANCE_THRESHOLD) {
+  if (existing && existing.distance <= maxDistance) {
     return {
       success: true,
       distance: existing.distance,
@@ -436,7 +437,7 @@ export const listenForStudentSignal = async (targetId, timeoutMs = 3500) => {
       if (!resolved && dev.studentRoll) {
         const rollMatch = dev.studentRoll.toLowerCase().trim();
         if (rollMatch === normalized) {
-          if (dev.distance <= DESK_HOVER_DISTANCE_THRESHOLD) {
+          if (dev.distance <= maxDistance) {
             resolved = true;
             clearTimeout(timer);
             unsubscribe();
