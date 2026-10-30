@@ -38,7 +38,7 @@ jobs:
       - name: Build Web Production Assets
         working-directory: frontend
         env:
-          VITE_API_BASE_URL: https://smart-attendance-backend-gtjj.onrender.com
+          VITE_API_BASE_URL: https://attendiq-backend-4k1c.onrender.com
         run: npm run build -- --mode production
 
       - name: Sync Capacitor Android
