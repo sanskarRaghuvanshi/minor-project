@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  baseURL: (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('smart-attendance-backend-gtjj')) ? import.meta.env.VITE_API_BASE_URL : 'https://attendiq-backend-4k1c.onrender.com',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -22,7 +22,7 @@ export const refreshAccessToken = async () => {
     throw new Error('No refresh token available');
   }
   const { data } = await axios.post(
-    `${import.meta.env.VITE_API_BASE_URL || ''}/api/v1/auth/refresh`,
+    `${(import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('smart-attendance-backend-gtjj')) ? import.meta.env.VITE_API_BASE_URL : 'https://attendiq-backend-4k1c.onrender.com'}/api/v1/auth/refresh`,
     { refreshToken },
   );
   const { token, refreshToken: newRefresh } = data.data;

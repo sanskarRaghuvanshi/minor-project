@@ -7,7 +7,7 @@ import EmptyState from '../common/EmptyState';
 import { usePagination } from '../../hooks/usePagination';
 import { formatDate } from '../../utils/formatDate';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('smart-attendance-backend-gtjj')) ? import.meta.env.VITE_API_BASE_URL : 'https://attendiq-backend-4k1c.onrender.com';
 
 const LeaveRequests = () => {
   const [tab, setTab] = useState('pending');
